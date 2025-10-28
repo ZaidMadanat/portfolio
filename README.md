@@ -7,7 +7,7 @@ Personal portfolio website showcasing projects, experience, and writing.
 ## Sections
 
 - **Home**: Introduction and profile
-- **Notable Projects**: Featured projects from CS194 course
+- **Notable Projects**: Featured projects 
 - **Projects**: All projects showcase
 - **Blog**: Writing and Medium profile
 - **Contact**: Social media and email links
