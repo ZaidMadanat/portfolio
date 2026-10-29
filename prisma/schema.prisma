@@ -104,6 +104,7 @@ model Post {
   redirects  Redirect[]
   emailSends EmailSend[]
   stat       PostStat?
+  dailyStats PostStatDaily[]
 
   @@index([status, publishedAt])
 }
@@ -393,6 +394,20 @@ model PostStat {
   views    Int      @default(0)
   likes    Int      @default(0)
   syncedAt DateTime
+}
+
+/// The Redis counters as they stood on each day (UTC date of the housekeeping
+/// run), so the dashboard can show views over a window. Admin only.
+model PostStatDaily {
+  id     String   @id @default(cuid())
+  postId String
+  post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  day    DateTime @db.Date
+  views  Int      @default(0)
+  likes  Int      @default(0)
+
+  @@unique([postId, day])
+  @@index([day])
 }
 
 // ---------------------------------------------------------------- Auth

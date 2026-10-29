@@ -1,10 +1,16 @@
 import type { Dashboard } from "@/lib/admin/dashboard";
-import { formatDate, plural, SITE_TIME_ZONE } from "@/lib/format";
+import { formatDate, plural } from "@/lib/format";
 
 // The dashboard's stat tiles (spec §7).
 
 const TILE = "flex min-w-0 flex-[1_1_10rem] flex-col gap-1 rounded-3xl border-2 border-ink p-4 sm:p-5";
 const nf = new Intl.NumberFormat("en-US");
+
+/** Snapshot days are UTC calendar dates, so they're formatted in UTC. */
+function viewsNote(views: Dashboard["stats"]["views"]): string {
+  if (!views.since) return "not counted yet";
+  return views.full ? "last 30 days" : `since ${formatDate(views.since)}`;
+}
 
 export function StatTiles({ stats }: { stats: Dashboard["stats"] }) {
   const { reviews, views } = stats;
@@ -20,8 +26,8 @@ export function StatTiles({ stats }: { stats: Dashboard["stats"] }) {
     { label: "Confirmed subscribers", value: stats.confirmedSubscribers, note: "get new posts by email", tone: "bg-surface" },
     {
       label: "Views",
-      value: views.total,
-      note: views.countedAt ? `all time, as of ${formatDate(views.countedAt, SITE_TIME_ZONE)}` : "not counted yet",
+      value: views.recent,
+      note: viewsNote(views),
       tone: "bg-soft",
     },
   ];

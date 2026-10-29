@@ -29,6 +29,11 @@ export function getViews(store: CounterStore, postId: string): Promise<number> {
   return store.get(viewsKey(postId));
 }
 
+/** How many visitors liked the post (no visitor check; for housekeeping). */
+export function countLikes(store: CounterStore, postId: string): Promise<number> {
+  return store.scard(likesKey(postId));
+}
+
 export async function likePost(
   store: CounterStore,
   postId: string,

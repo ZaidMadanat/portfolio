@@ -8,6 +8,7 @@ const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const { SyncStatus } = await import("@/features/admin/dashboard/SyncStatus");
+const { StatTiles } = await import("@/features/admin/dashboard/StatTiles");
 
 // Pacific time: PDT (UTC-7) on 2026-10-29.
 const at = (pacificHour: number) => new Date(Date.UTC(2026, 9, 29, pacificHour + 7, 30));
@@ -71,5 +72,32 @@ describe("SyncStatus", () => {
     render(<SyncStatus rows={[...rows]} />);
     fireEvent.click(screen.getByRole("button", { name: "Run sync now for Letterboxd" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Letterboxd: Couldn't start the sync. Try again."));
+  });
+});
+
+describe("StatTiles views", () => {
+  const stats = (views: Parameters<typeof StatTiles>[0]["stats"]["views"]) => ({
+    published: 1,
+    drafts: 0,
+    reviews: { total: 0, FOOD: 0, FILM: 0, ALBUM: 0, CONCERT: 0 },
+    confirmedSubscribers: 0,
+    views,
+  });
+  const viewsTile = () => screen.getAllByRole("listitem").find((li) => li.textContent?.startsWith("Views"))!;
+  const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+  it("shows the last 30 days when there's a full window", () => {
+    render(<StatTiles stats={stats({ recent: 1234, since: utc("2026-09-29"), full: true, countedAt: utc("2026-10-29") })} />);
+    expect(viewsTile().textContent).toBe("Views1,234last 30 days");
+  });
+
+  it("says 'since <date>' when history is shorter than 30 days", () => {
+    render(<StatTiles stats={stats({ recent: 40, since: utc("2026-10-20"), full: false, countedAt: utc("2026-10-29") })} />);
+    expect(viewsTile().textContent).toBe("Views40since Oct 20, 2026");
+  });
+
+  it("says 'not counted yet' before the first housekeeping run", () => {
+    render(<StatTiles stats={stats({ recent: 0, since: null, full: false, countedAt: null })} />);
+    expect(viewsTile().textContent).toBe("Views0not counted yet");
   });
 });

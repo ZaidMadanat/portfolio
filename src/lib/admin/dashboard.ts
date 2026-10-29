@@ -1,5 +1,6 @@
 import type { ReviewKind } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { viewsWindow } from "@/lib/admin/views-window";
 
 // The admin dashboard's reads (spec §7). Callers check the admin session.
 
@@ -38,11 +39,12 @@ export type Dashboard = {
     reviews: Record<ReviewKind, number> & { total: number };
     confirmedSubscribers: number;
     /**
-     * Sum of the stored view counters (PostStat, copied from Redis daily) and
-     * when they were last copied. PostStat holds one running total per post,
-     * so this is all-time, not a 30-day window.
+     * Views over the last 30 days, from the daily snapshots (PostStatDaily):
+     * the latest total minus the one 30 days before it. With less history,
+     * `full` is false and `since` is the oldest snapshot's day ("since <date>").
+     * `countedAt` is the latest snapshot's day; null before the first run.
      */
-    views: { total: number; countedAt: Date | null };
+    views: { recent: number; since: Date | null; full: boolean; countedAt: Date | null };
   };
   drafts: DashboardDraft[];
   sync: { source: SyncSourceName; lastRun: SyncRunSummary | null }[];
@@ -50,12 +52,17 @@ export type Dashboard = {
 
 const RUN_FIELDS = { startedAt: true, finishedAt: true, ok: true, message: true, itemsChanged: true } as const;
 
+function viewsTile(days: { day: Date; views: number }[]): Dashboard["stats"]["views"] {
+  const w = viewsWindow(days);
+  return { recent: w.views, since: w.since, full: w.full, countedAt: w.asOf };
+}
+
 export async function getDashboard(): Promise<Dashboard> {
   const [posts, reviews, confirmedSubscribers, views, drafts, runs] = await Promise.all([
     db.post.groupBy({ by: ["status"], _count: { _all: true } }),
     db.review.groupBy({ by: ["kind"], _count: { _all: true } }),
     db.subscriber.count({ where: { status: "CONFIRMED" } }),
-    db.postStat.aggregate({ _sum: { views: true }, _max: { syncedAt: true } }),
+    db.postStatDaily.groupBy({ by: ["day"], _sum: { views: true }, orderBy: { day: "asc" } }),
     db.post.findMany({
       where: { status: "DRAFT" },
       orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
@@ -79,7 +86,7 @@ export async function getDashboard(): Promise<Dashboard> {
       drafts: postCount("DRAFT"),
       reviews: { total: byKind.FOOD + byKind.FILM + byKind.ALBUM + byKind.CONCERT, ...byKind },
       confirmedSubscribers,
-      views: { total: views._sum.views ?? 0, countedAt: views._max.syncedAt ?? null },
+      views: viewsTile(views.map((d) => ({ day: d.day, views: d._sum.views ?? 0 }))),
     },
     drafts: drafts.map(({ template, ...d }) => ({ ...d, templateName: template?.name ?? null })),
     sync: SYNC_SOURCES.map((source, i) => ({ source, lastRun: runs[i] ?? null })),

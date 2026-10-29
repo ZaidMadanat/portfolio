@@ -61,7 +61,7 @@ describe("getDashboard", () => {
       drafts: 0,
       reviews: { total: 0, FOOD: 0, FILM: 0, ALBUM: 0, CONCERT: 0 },
       confirmedSubscribers: 0,
-      views: { total: 0, countedAt: null },
+      views: { recent: 0, since: null, full: false, countedAt: null },
     });
     expect(d.drafts).toEqual([]);
     expect(d.sync.map((s) => [s.source, s.lastRun])).toEqual([
@@ -71,7 +71,7 @@ describe("getDashboard", () => {
     ]);
   });
 
-  it("counts posts, reviews by kind, confirmed subscribers and stored views", async () => {
+  it("counts posts, reviews by kind, confirmed subscribers and 30-day views", async () => {
     const a = await post("PUBLISHED");
     const b = await post("PUBLISHED");
     await post("DRAFT");
@@ -83,8 +83,14 @@ describe("getDashboard", () => {
     await subscriber("CONFIRMED");
     await subscriber("PENDING");
     await subscriber("UNSUBSCRIBED");
-    await db.postStat.create({ data: { postId: a.id, views: 120, likes: 3, syncedAt: daysAgo(1) } });
-    await db.postStat.create({ data: { postId: b.id, views: 30, likes: 0, syncedAt: daysAgo(2) } });
+    const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+    await db.postStatDaily.createMany({
+      data: [
+        { postId: a.id, day: utc("2026-09-28"), views: 20, likes: 1 },
+        { postId: a.id, day: utc("2026-10-28"), views: 120, likes: 3 },
+        { postId: b.id, day: utc("2026-10-28"), views: 30, likes: 0 },
+      ],
+    });
 
     const { stats } = await getDashboard();
     expect(stats).toEqual({
@@ -92,7 +98,7 @@ describe("getDashboard", () => {
       drafts: 1,
       reviews: { total: 4, FOOD: 2, FILM: 1, ALBUM: 0, CONCERT: 1 },
       confirmedSubscribers: 2,
-      views: { total: 150, countedAt: daysAgo(1) },
+      views: { recent: 130, since: new Date("2026-09-28T00:00:00.000Z"), full: true, countedAt: new Date("2026-10-28T00:00:00.000Z") },
     });
   });
 
