@@ -55,3 +55,6 @@ agent-coordination.md
 
 # e2e empty-database build (e2e/support/web-server.ts)
 /.next-e2e-empty/
+
+# local dev photo store (src/lib/media/store.ts); production uses Vercel Blob
+/public/uploads/

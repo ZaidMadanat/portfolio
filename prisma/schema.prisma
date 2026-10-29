@@ -335,14 +335,16 @@ model SyncRun {
 // ---------------------------------------------------------------- Media
 
 model Media {
-  id        String   @id @default(cuid())
-  blobUrl   String
-  filename  String
-  width     Int
-  height    Int
-  bytes     Int
-  alt       String   @default("")
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  blobUrl     String
+  filename    String
+  width       Int
+  height      Int
+  bytes       Int
+  alt         String   @default("")
+  /// ~16 px WebP data URL for a blur-up placeholder (spec §7.1).
+  blurDataUrl String   @default("")
+  createdAt   DateTime @default(now())
 
   coverOf Post[]        @relation("PostCover")
   posts   PostMedia[]

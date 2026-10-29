@@ -86,6 +86,14 @@ test.describe("admin auth", () => {
     expect((await res.json()).code).toBe("NOT_ADMIN");
   });
 
+  test("an admin route without a session is 401", async ({ request }) => {
+    const res = await request.post("/api/admin/media", {
+      multipart: { file: { name: "photo.jpg", mimeType: "image/jpeg", buffer: Buffer.from("not really a photo") } },
+    });
+    expect(res.status()).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
   test("public pages stay free of auth cookies", async ({ page, context }) => {
     await page.goto("/");
     await page.goto("/blog");
