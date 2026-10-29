@@ -17,6 +17,7 @@ import { AlbumCover } from "@/components/ui/AlbumCover";
 import { PosterBlock } from "@/components/ui/PosterBlock";
 import { setFavorites } from "@/app/admin/favourites/actions";
 import { MAX_FAVOURITES, type FavouriteChoice, type FavouriteItem } from "@/lib/admin/favourite-items";
+import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 
 // One top-4 list (spec §7 Favourites): drag the handle to reorder (or focus it,
 // press Space, move with the arrow keys and press Space again), Swap opens a
@@ -192,7 +193,12 @@ export function FavouriteList({ kind, initial, choices }: Props) {
 type RowProps = { id: string; index: number; kind: Kind; item: FavouriteItem; onSwap: () => void; onRemove: () => void };
 
 function SortableRow({ id, index, kind, item, onSwap, onRemove }: RowProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const reducedMotion = usePrefersReducedMotion();
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    // Rows still follow the pointer or the arrow keys; they just don't glide.
+    transition: reducedMotion ? null : undefined,
+  });
   const name = itemName(item);
   return (
     <li

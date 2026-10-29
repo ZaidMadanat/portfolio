@@ -70,7 +70,7 @@ function pinButton(place: Place, index: number, pressed: boolean): HTMLButtonEle
   button.setAttribute("aria-pressed", String(pressed));
 
   const body = document.createElement("span");
-  body.className = `relative z-10 grid size-9 place-items-center rounded-full border-[3px] border-white font-display text-[15px] leading-none font-extrabold shadow-[0_0_0_1.5px_var(--color-ink),0_3px_0_1.5px_var(--color-ink)] transition-[width,height,font-size] duration-150 group-hover:size-10 group-aria-pressed:size-12 group-aria-pressed:text-lg ${tone}`;
+  body.className = `relative z-10 grid size-9 place-items-center rounded-full border-[3px] border-white font-display text-[15px] leading-none font-extrabold shadow-[0_0_0_1.5px_var(--color-ink),0_3px_0_1.5px_var(--color-ink)] pin-grow group-hover:size-10 group-aria-pressed:size-12 group-aria-pressed:text-lg ${tone}`;
   body.textContent = String(place.rating);
 
   const tip = document.createElement("span");

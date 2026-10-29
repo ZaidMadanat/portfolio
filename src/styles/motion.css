@@ -56,6 +56,15 @@
     transform: translateY(-2px);
   }
 
+  /* Food-map pin body: grows on hover and when selected. Without motion the
+     size just snaps. */
+  [data-motion="on"] .pin-grow {
+    transition:
+      width 150ms ease-out,
+      height 150ms ease-out,
+      font-size 150ms ease-out;
+  }
+
   [data-motion="on"] .pin-drop {
     animation: pin-drop 400ms ease-out both;
     animation-delay: calc(var(--i, 0) * 40ms);
