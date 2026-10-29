@@ -1,0 +1,47 @@
+/* Removable motion layer (spec §5). Delete the import in layout.tsx, or drop
+   data-motion="on" from <html>, and every effect below turns off. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(-3deg);
+    }
+    75% {
+      transform: rotate(3deg);
+    }
+  }
+
+  @keyframes pin-drop {
+    from {
+      transform: translateY(-24px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  [data-motion="on"] .wiggle:hover {
+    animation: wiggle 300ms ease-in-out;
+  }
+
+  [data-motion="on"] .lift {
+    transition:
+      transform 150ms ease-out,
+      box-shadow 150ms ease-out;
+  }
+
+  [data-motion="on"] .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 6px 6px 0 var(--color-ink);
+  }
+
+  [data-motion="on"] .pin-drop {
+    animation: pin-drop 400ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+}
