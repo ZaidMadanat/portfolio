@@ -14,9 +14,9 @@ import { EMPTY_DB_URL, EMPTY_PORT, EMPTY_URL, SEEDED_DB_URL, SEEDED_PORT } from 
 
 const EMPTY_DIST = ".next-e2e-empty";
 
+// Each build keys its unstable_cache entries by its own CACHE_BUILD_KEY
+// (next.config.ts), so the empty build's entries can't leak into the seeded one.
 function build(databaseUrl: string) {
-  // unstable_cache entries written by the previous build must not leak in.
-  rmSync(".next/cache/fetch-cache", { recursive: true, force: true });
   const res = spawnSync("npx", ["next", "build"], {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: databaseUrl },

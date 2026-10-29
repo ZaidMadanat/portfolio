@@ -1,8 +1,16 @@
 import type { NextConfig } from "next";
 
+// One value per `next build`, inlined into the bundle through `env` so the
+// build and the server it produces agree. src/lib/cache.ts adds it to every
+// unstable_cache key, so a build never reuses entries from an earlier build.
+// Vercel: the deployment id (a redeploy gets a new one). Elsewhere: the time
+// this config was loaded, i.e. build start.
+const CACHE_BUILD_KEY = process.env.VERCEL_DEPLOYMENT_ID || `local-${Date.now().toString(36)}`;
+
 // cacheComponents and the React Compiler stay off: public pages rely on
 // segment config (`export const revalidate`) and tag-based revalidation.
 const nextConfig: NextConfig = {
+  env: { CACHE_BUILD_KEY },
   // Don't let `next dev` write AGENTS.md into the repo.
   agentRules: false,
   // e2e serves a second, empty-database build from its own folder
