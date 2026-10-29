@@ -32,7 +32,19 @@ export default defineConfig({
     // Specs that publish to public pages run last, once every other spec is
     // done, so those still see exactly the seeded posts. They tidy up after
     // themselves (unpublish), so a reused local server stays seeded too.
-    { name: "writes", dependencies: ["chromium", "mobile"], testMatch: WRITES, use: { ...devices["Desktop Chrome"] } },
+    //
+    // One worker: these specs save in the admin and then load the static page
+    // the save expired. Run in parallel, one spec's load can re-render that page
+    // from rows read just before another spec's save; Next stamps the entry when
+    // it is stored, after that save's updateTag, so the next load gets the old
+    // rows (seen as /reviews keeping the previous favourites).
+    {
+      name: "writes",
+      dependencies: ["chromium", "mobile"],
+      testMatch: WRITES,
+      workers: 1,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   // Prepares the e2e databases, builds twice and serves the seeded build on
   // 3100 and the empty-database build on 3101 (e2e/support/web-server.ts).
