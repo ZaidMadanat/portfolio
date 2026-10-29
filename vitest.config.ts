@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// Unit tests only. Playwright owns e2e/**; integration tests join in Task 4.
+// Unit tests only (DB-free). Playwright owns e2e/**; integration tests run via
+// vitest.integration.config.ts (`npm run test:int`).
 export default defineConfig({
   plugins: [react()],
   resolve: {

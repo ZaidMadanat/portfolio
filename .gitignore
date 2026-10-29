@@ -49,3 +49,6 @@ next-env.d.ts
 .claude/
 docs/superpowers/
 agent-coordination.md
+
+# generated Prisma client (prisma generate, run on postinstall)
+/src/generated/
