@@ -133,6 +133,21 @@ test.describe("blog index, seeded database", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Email updates" })).toBeVisible();
   });
 
+  test("an email link with a bad token shows a friendly page and changes nothing", async ({ page }) => {
+    for (const path of ["/api/unsubscribe?token=nope", "/api/subscribe/confirm?token=nope"]) {
+      const res = await page.goto(path);
+      expect(res?.status()).toBe(400);
+      await expect(page.getByRole("heading", { level: 1, name: "That link didn't work." })).toBeVisible();
+      await expect(page.getByRole("button")).toHaveCount(0);
+      // Styled by the site's tokens (the stylesheet loaded under the page's CSP).
+      expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    }
+  });
+
   test("the RSS link serves the feed with every published post", async ({ page, request }) => {
     await page.goto("/blog");
     await expect(page.locator('head link[rel="alternate"][type="application/rss+xml"]')).toHaveAttribute(

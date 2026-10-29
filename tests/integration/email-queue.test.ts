@@ -252,41 +252,101 @@ describe("routes", () => {
     expect(bad.headers.get("location")).toBe("http://localhost/subscribed?state=invalid-email");
   });
 
-  it("GET /api/subscribe/confirm confirms with the confirm token and redirects", async () => {
+  const status = async (email: string) => (await db.subscriber.findUniqueOrThrow({ where: { email } })).status;
+  const post = (url: string, body?: string) =>
+    new Request(url, {
+      method: "POST",
+      headers: body === undefined ? {} : { "content-type": "application/x-www-form-urlencoded" },
+      body,
+    });
+
+  it("GET /api/subscribe/confirm only renders a confirm button; POST confirms and redirects", async () => {
     await subscribe("reader@example.com", { mailer: fakeMailer({ dailyLimit: 100 }) });
     const sub = await db.subscriber.findUniqueOrThrow({ where: { email: "reader@example.com" } });
-    const { GET } = await confirmRoute();
-    const bad = await GET(new Request(`http://localhost/api/subscribe/confirm?token=${sub.unsubscribeToken}`));
-    expect(bad.headers.get("location")).toBe("http://localhost/subscribed?state=invalid-link");
-    const ok = await GET(new Request(`http://localhost/api/subscribe/confirm?token=${sub.confirmToken}`));
+    const { GET, POST } = await confirmRoute();
+    const url = `http://localhost/api/subscribe/confirm?token=${sub.confirmToken}`;
+
+    const page = await GET(new Request(url));
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(page.headers.get("cache-control")).toBe("no-store");
+    expect(page.headers.get("referrer-policy")).toBe("no-referrer");
+    const html = await page.text();
+    expect(html).toContain(`<form method="post" action="/api/subscribe/confirm?token=${sub.confirmToken}">`);
+    expect(html).toContain('<button type="submit">Confirm subscription</button>');
+    expect(html).not.toContain("<script");
+    // A scanner opening the link (even twice) changes nothing.
+    await GET(new Request(url));
+    expect(await status("reader@example.com")).toBe("PENDING");
+
+    const ok = await POST(post(url, ""));
     expect(ok.status).toBe(303);
     expect(ok.headers.get("location")).toBe("http://localhost/subscribed?state=confirmed");
+    expect(await status("reader@example.com")).toBe("CONFIRMED");
   });
 
-  it("/api/unsubscribe: the confirm token fails, the unsubscribe token works (GET link and one-click POST)", async () => {
-    await confirmedSubscribers(2);
+  it("bad confirm tokens get the same friendly page, with no form and no detail", async () => {
+    await subscribe("reader@example.com", { mailer: fakeMailer({ dailyLimit: 100 }) });
+    const sub = await db.subscriber.findUniqueOrThrow({ where: { email: "reader@example.com" } });
+    const { GET, POST } = await confirmRoute();
+    for (const token of [sub.unsubscribeToken, "nope", "<script>", ""]) {
+      const res = await GET(new Request(`http://localhost/api/subscribe/confirm?token=${encodeURIComponent(token)}`));
+      expect(res.status).toBe(400);
+      const html = await res.text();
+      expect(html).toContain("That link didn&#39;t work.");
+      expect(html).not.toContain("<form");
+      expect(html).not.toContain("<script>");
+    }
+    const res = await POST(post(`http://localhost/api/subscribe/confirm?token=${sub.unsubscribeToken}`, ""));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("That link didn&#39;t work.");
+    expect(await status("reader@example.com")).toBe("PENDING");
+  });
+
+  it("GET /api/unsubscribe only renders an Unsubscribe button; the button's POST unsubscribes and redirects", async () => {
+    await confirmedSubscribers(1);
     const { GET, POST } = await unsubscribeRoute();
+    const url = "http://localhost/api/unsubscribe?token=unsub-0";
 
-    const wrong = await GET(new Request("http://localhost/api/unsubscribe?token=confirm-0"));
-    expect(wrong.headers.get("location")).toBe("http://localhost/subscribed?state=invalid-link");
-    expect((await db.subscriber.findUniqueOrThrow({ where: { email: "reader0@example.com" } })).status).toBe("CONFIRMED");
+    const page = await GET(new Request(url));
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain('<form method="post" action="/api/unsubscribe?token=unsub-0">');
+    expect(html).toContain('<button type="submit">Unsubscribe</button>');
+    await GET(new Request(url));
+    expect(await status("reader0@example.com")).toBe("CONFIRMED");
 
-    const link = await GET(new Request("http://localhost/api/unsubscribe?token=unsub-0"));
-    expect(link.status).toBe(303);
-    expect(link.headers.get("location")).toBe("http://localhost/subscribed?state=unsubscribed");
-    expect((await db.subscriber.findUniqueOrThrow({ where: { email: "reader0@example.com" } })).status).toBe("UNSUBSCRIBED");
+    const res = await POST(post(url, ""));
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("http://localhost/subscribed?state=unsubscribed");
+    expect(await status("reader0@example.com")).toBe("UNSUBSCRIBED");
+  });
 
-    const oneClick = await POST(
-      new Request("http://localhost/api/unsubscribe?token=unsub-1", {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: "List-Unsubscribe=One-Click",
-      }),
-    );
-    expect(oneClick.status).toBe(200);
-    expect((await db.subscriber.findUniqueOrThrow({ where: { email: "reader1@example.com" } })).status).toBe("UNSUBSCRIBED");
+  it("RFC 8058 one-click POST unsubscribes directly with a 200", async () => {
+    await confirmedSubscribers(1);
+    const { POST } = await unsubscribeRoute();
+    const res = await POST(post("http://localhost/api/unsubscribe?token=unsub-0", "List-Unsubscribe=One-Click"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(await status("reader0@example.com")).toBe("UNSUBSCRIBED");
 
-    const missing = await POST(new Request("http://localhost/api/unsubscribe", { method: "POST" }));
+    const bad = await POST(post("http://localhost/api/unsubscribe?token=nope", "List-Unsubscribe=One-Click"));
+    expect(bad.status).toBe(400);
+    const missing = await POST(post("http://localhost/api/unsubscribe", "List-Unsubscribe=One-Click"));
     expect(missing.status).toBe(400);
+  });
+
+  it("the confirm token can't unsubscribe (GET page or POST)", async () => {
+    await confirmedSubscribers(1);
+    const { GET, POST } = await unsubscribeRoute();
+    const url = "http://localhost/api/unsubscribe?token=confirm-0";
+    const page = await GET(new Request(url));
+    expect(page.status).toBe(400);
+    const html = await page.text();
+    expect(html).toContain("That link didn&#39;t work.");
+    expect(html).not.toContain("<form");
+    expect((await POST(post(url, ""))).status).toBe(400);
+    expect((await POST(post(url, "List-Unsubscribe=One-Click"))).status).toBe(400);
+    expect(await status("reader0@example.com")).toBe("CONFIRMED");
   });
 });

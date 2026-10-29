@@ -1,15 +1,26 @@
-import { confirmSubscription } from "@/lib/email/subscribers";
+import { invalidLinkPage, linkPage, readToken, toSubscribed } from "@/lib/email/link-page";
+import { confirmSubscription, isConfirmTokenValid } from "@/lib/email/subscribers";
 
-// GET /api/subscribe/confirm?token=<confirmToken> (spec §9.4), linked from the
-// confirmation email. Redirects to the static /subscribed page.
+// /api/subscribe/confirm?token=<confirmToken> (spec §9.4), linked from the
+// confirmation email. GET never changes anything: it renders a page whose
+// button POSTs back here, so link-scanning mail filters can't confirm anyone.
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
-  const token = new URL(req.url).searchParams.get("token") ?? "";
-  const result = await confirmSubscription(token);
-  const state = result === "confirmed" ? "confirmed" : "invalid-link";
-  return new Response(null, {
-    status: 303,
-    headers: { Location: new URL(`/subscribed?state=${state}`, req.url).toString(), "Cache-Control": "no-store" },
+  const token = await readToken(req);
+  if (!(await isConfirmTokenValid(token))) return invalidLinkPage();
+  return linkPage({
+    title: "Confirm your subscription",
+    body: "One click and you'll get new posts by email. Every email has a link to unsubscribe.",
+    button: {
+      label: "Confirm subscription",
+      action: `/api/subscribe/confirm?token=${encodeURIComponent(token)}`,
+    },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  const form = await req.formData().catch(() => null);
+  const result = await confirmSubscription(await readToken(req, form));
+  return result === "confirmed" ? toSubscribed(req, "confirmed") : invalidLinkPage();
 }

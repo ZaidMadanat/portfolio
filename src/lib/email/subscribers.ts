@@ -73,3 +73,18 @@ export async function unsubscribe(token: string): Promise<"unsubscribed" | "inva
   ]);
   return "unsubscribed";
 }
+
+/** Read-only: does this confirm token still lead somewhere? (Unknown or unsubscribed → false.) */
+export async function isConfirmTokenValid(token: string): Promise<boolean> {
+  const parsed = tokenSchema.safeParse(token);
+  if (!parsed.success) return false;
+  const sub = await db.subscriber.findUnique({ where: { confirmToken: parsed.data }, select: { status: true } });
+  return Boolean(sub && sub.status !== "UNSUBSCRIBED");
+}
+
+/** Read-only: is this a known unsubscribe token? */
+export async function isUnsubscribeTokenValid(token: string): Promise<boolean> {
+  const parsed = tokenSchema.safeParse(token);
+  if (!parsed.success) return false;
+  return (await db.subscriber.count({ where: { unsubscribeToken: parsed.data } })) > 0;
+}
