@@ -51,10 +51,19 @@ export function blobStore(token: string): MediaStore {
   };
 }
 
-export function localStore(root = join(process.cwd(), "public", "uploads")): MediaStore {
-  const base = resolve(root);
+// Turbopack's file tracing can't scope a runtime path, so it would trace the
+// whole project (public/ included) into every server function that imports
+// this module. The ignore comments opt these calls out: the local store only
+// runs off Vercel (getMediaStore throws there) and never needs traced files.
+// next.config.ts also excludes public/uploads from every trace.
+function defaultRoot() {
+  return join(/*turbopackIgnore: true*/ process.cwd(), "public", "uploads");
+}
+
+export function localStore(root = defaultRoot()): MediaStore {
+  const base = resolve(/*turbopackIgnore: true*/ root);
   const inside = (path: string) => {
-    const target = resolve(base, path);
+    const target = resolve(/*turbopackIgnore: true*/ base, path);
     if (!target.startsWith(base + sep)) throw new Error("Invalid media path");
     return target;
   };

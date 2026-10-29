@@ -25,3 +25,15 @@ describe("next.config CACHE_BUILD_KEY", () => {
     expect(a).not.toBe(b);
   });
 });
+
+describe("next.config file tracing", () => {
+  // The local media store (src/lib/media/store.ts) writes into public/uploads
+  // in dev. Those files, and the private planning docs, must never be traced
+  // into a server function, even if a dynamic fs call slips back in.
+  it("excludes local uploads and private files from every route's trace", async () => {
+    const excludes = (await loadConfig()).outputFileTracingExcludes?.["/*"];
+    expect(excludes).toEqual(
+      expect.arrayContaining(["public/uploads/**/*", "docs/**/*", ".claude/**/*", "agent-coordination.md"]),
+    );
+  });
+});

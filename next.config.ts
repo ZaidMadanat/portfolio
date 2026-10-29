@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
   // BlockNote's server renderer pulls in JSDOM; load it from node_modules at
   // runtime instead of bundling it (spec §7.2).
   serverExternalPackages: ["@blocknote/server-util", "@blocknote/core"],
+  // Never ship dev uploads (src/lib/media/store.ts's local store) or the
+  // private planning files inside a server function, even if a dynamic fs
+  // call makes Turbopack trace the whole project again.
+  outputFileTracingExcludes: {
+    "/*": ["public/uploads/**/*", "docs/**/*", ".claude/**/*", "agent-coordination.md"],
+  },
   turbopack: {
     rules: {
       "*.css": {
