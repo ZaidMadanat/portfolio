@@ -137,3 +137,57 @@ export async function getPostForEditor(
     }),
   };
 }
+
+// ---------------------------------------------------------------- posts list
+
+export const POST_FILTERS = [
+  { id: "all", label: "All", status: null },
+  { id: "draft", label: "Drafts", status: "DRAFT" },
+  { id: "published", label: "Published", status: "PUBLISHED" },
+] as const satisfies readonly { id: string; label: string; status: PostStatus | null }[];
+
+export type PostFilter = (typeof POST_FILTERS)[number]["id"];
+
+/** `?status=` → a filter id; anything unknown is "all". */
+export function parsePostFilter(value: string | string[] | undefined): PostFilter {
+  const v = Array.isArray(value) ? value[0] : value;
+  return POST_FILTERS.find((f) => f.id === v)?.id ?? "all";
+}
+
+export type AdminPostRow = {
+  id: string;
+  title: string;
+  slug: string;
+  status: PostStatus;
+  category: Category;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  templateName: string | null;
+};
+
+/** Every post for the admin list, most recently edited first, plus counts per status. */
+export async function listAdminPosts(filter: PostFilter): Promise<{ rows: AdminPostRow[]; counts: Record<PostFilter, number> }> {
+  const status = POST_FILTERS.find((f) => f.id === filter)?.status ?? null;
+  const [rows, grouped] = await Promise.all([
+    db.post.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        category: true,
+        updatedAt: true,
+        publishedAt: true,
+        template: { select: { name: true } },
+      },
+    }),
+    db.post.groupBy({ by: ["status"], _count: { _all: true } }),
+  ]);
+  const count = (s: PostStatus) => grouped.find((g) => g.status === s)?._count._all ?? 0;
+  return {
+    rows: rows.map(({ template, ...r }) => ({ ...r, templateName: template?.name ?? null })),
+    counts: { all: count("DRAFT") + count("PUBLISHED"), draft: count("DRAFT"), published: count("PUBLISHED") },
+  };
+}

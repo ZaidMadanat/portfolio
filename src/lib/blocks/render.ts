@@ -160,3 +160,12 @@ export function plainText(blocks: unknown[]): string {
   collect(blocks, parts);
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
+
+/** The text of every top-level heading, in order (a template's outline). */
+export function headingTexts(blocks: unknown[]): string[] {
+  if (!Array.isArray(blocks)) return [];
+  return blocks
+    .filter((b): b is Json => isObj(b) && b.type === "heading")
+    .map((b) => inlineText(b.content).trim())
+    .filter(Boolean);
+}
