@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const revalidateTag = vi.fn();
-vi.mock("next/cache", () => ({ revalidateTag, unstable_cache: vi.fn() }));
+const updateTag = vi.fn();
+vi.mock("next/cache", () => ({ revalidateTag, updateTag, unstable_cache: vi.fn() }));
 
 const { revalidateFor, tagsFor } = await import("@/lib/revalidate");
 
@@ -44,6 +45,7 @@ describe("tagsFor", () => {
 describe("revalidateFor", () => {
   beforeEach(() => {
     revalidateTag.mockClear();
+    updateTag.mockClear();
   });
 
   it("revalidates each tag with the max profile", () => {
@@ -54,5 +56,17 @@ describe("revalidateFor", () => {
       ["home", "max"],
       ["post:p1", "max"],
     ]);
+  });
+
+  it("expires each tag immediately with updateTag for admin server actions", () => {
+    revalidateFor("post", { postId: "p1" }, { immediate: true });
+    expect(updateTag.mock.calls).toEqual([["posts"], ["post:p1"], ["rss"], ["home"]]);
+    expect(revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("defaults to the max profile when immediate is false", () => {
+    revalidateFor("strava", undefined, { immediate: false });
+    expect(revalidateTag.mock.calls).toEqual([["home", "max"]]);
+    expect(updateTag).not.toHaveBeenCalled();
   });
 });

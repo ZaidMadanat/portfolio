@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractMediaIds } from "@/lib/blocks/media-refs";
+import { extractMediaIds, withMediaAlt } from "@/lib/blocks/media-refs";
 import { plainText, renderPostHtml, sanitizePostHtml } from "@/lib/blocks/render";
 import { schema } from "@/lib/blocks/schema";
 
@@ -178,5 +178,34 @@ describe("plainText", () => {
         },
       ]),
     ).toBe("Tip inner a b");
+  });
+});
+
+describe("withMediaAlt", () => {
+  type B = { type: string; props?: Record<string, unknown>; content?: string; children?: B[] };
+  const blocks: B[] = [
+    { type: "image", props: { url: `${blob}/media/abc/960.webp`, name: "IMG_0042.jpg", caption: "Lunch" } },
+    {
+      type: "paragraph",
+      content: "x",
+      children: [{ type: "image", props: { url: "/uploads/media/def/480.webp", name: "IMG_7.jpg" } }],
+    },
+    { type: "image", props: { url: "https://example.com/elsewhere.png", name: "outside.png" } },
+  ];
+
+  it("uses the library alt text for every image it knows, nested ones too, without touching the input", () => {
+    const out = withMediaAlt(blocks, new Map([["abc", "A carnitas burrito"], ["def", ""]])) as B[];
+    expect(out[0]?.props).toEqual({ url: `${blob}/media/abc/960.webp`, name: "A carnitas burrito", caption: "Lunch" });
+    // An empty library alt means "decorative": never the camera filename.
+    expect(out[1]?.children?.[0]?.props?.name).toBe("");
+    // Images that aren't in the library keep what the editor stored.
+    expect(out[2]?.props?.name).toBe("outside.png");
+    expect(blocks[0]?.props?.name).toBe("IMG_0042.jpg");
+  });
+
+  it("ends up as the img alt in the rendered html", async () => {
+    const html = await renderPostHtml(withMediaAlt(blocks.slice(0, 1), new Map([["abc", "A \"big\" burrito"]])));
+    expect(html).toContain('alt="A &quot;big&quot; burrito"');
+    expect(html).not.toContain("IMG_0042");
   });
 });

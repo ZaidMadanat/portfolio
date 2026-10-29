@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidateTag, updateTag } from "next/cache";
 import { TAGS } from "@/lib/cache";
 
 export type RevalidateEvent =
@@ -34,10 +34,22 @@ export function tagsFor(event: RevalidateEvent, ids: RevalidateIds = {}): string
 }
 
 /**
- * Revalidates every tag for a write. Call from server actions and cron routes
- * only. Uses the "max" profile (stale-while-revalidate): the next visit gets
- * the old page while the new one renders.
+ * Revalidates every tag for a write.
+ *
+ * - Cron jobs and route handlers use the default: `revalidateTag(tag, "max")`,
+ *   stale-while-revalidate. The next visit gets the old page while the new one
+ *   renders.
+ * - Admin server actions pass `{immediate: true}`: `updateTag(tag)` expires the
+ *   tag now, so Zaid sees his own change on the next load. Next only allows
+ *   updateTag inside a Server Action.
  */
-export function revalidateFor(event: RevalidateEvent, ids?: RevalidateIds): void {
-  for (const tag of tagsFor(event, ids)) revalidateTag(tag, "max");
+export function revalidateFor(
+  event: RevalidateEvent,
+  ids?: RevalidateIds,
+  { immediate = false }: { immediate?: boolean } = {},
+): void {
+  for (const tag of tagsFor(event, ids)) {
+    if (immediate) updateTag(tag);
+    else revalidateTag(tag, "max");
+  }
 }

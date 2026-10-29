@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatBytes,
   formatDate,
   formatDuration,
   formatMiles,
@@ -34,5 +35,14 @@ describe("format", () => {
     expect(priceLabel(2)).toBe("$$");
     expect(plural(1, "walk")).toBe("1 walk");
     expect(plural(3, "walk")).toBe("3 walks");
+  });
+});
+
+describe("formatBytes", () => {
+  it("gives bytes, whole KB, then MB with one decimal", () => {
+    expect(formatBytes(999)).toBe("999 B");
+    expect(formatBytes(1536)).toBe("2 KB");
+    expect(formatBytes(412_000)).toBe("402 KB");
+    expect(formatBytes(1_234_567)).toBe("1.2 MB");
   });
 });
