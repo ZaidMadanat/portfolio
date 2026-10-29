@@ -42,11 +42,13 @@ export default async function SubscribersPage() {
 
       {rows.length > 0 ? (
         // Scrolls sideways inside its box on phones; focusable so the keyboard can scroll it.
+        // `relative` keeps the absolutely positioned sr-only text inside the box:
+        // without it, it escapes and makes the whole page wider than the phone.
         <div
           role="region"
           aria-label="Subscriber list"
           tabIndex={0}
-          className="max-w-full overflow-x-auto rounded-3xl border-2 border-ink bg-surface"
+          className="relative max-w-full overflow-x-auto rounded-3xl border-2 border-ink bg-surface"
         >
           <table className="w-full min-w-[36rem] border-collapse text-left">
             <caption className="sr-only">Subscribers, newest first</caption>
