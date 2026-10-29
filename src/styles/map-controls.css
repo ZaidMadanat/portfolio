@@ -1,0 +1,14 @@
+/* MapLibre's controls as 44 px touch targets (spec §5), on every map
+   (FoodMap and the admin PinPicker import this after maplibre-gl.css). */
+.maplibregl-ctrl-group button {
+  width: 44px;
+  height: 44px;
+}
+
+/* The compact credit's (i) stays a 24 px circle; an invisible ring widens its
+   hit area to 44 px (it sits 10 px in from the map's corner). */
+.maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}

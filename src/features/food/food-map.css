@@ -8,11 +8,6 @@
   overflow: hidden;
 }
 
-[data-testid="food-map"] .maplibregl-ctrl-group button {
-  width: 36px;
-  height: 36px;
-}
-
 [data-testid="food-map"] .maplibregl-ctrl-group button + button {
   border-top: 2px solid var(--color-line);
 }

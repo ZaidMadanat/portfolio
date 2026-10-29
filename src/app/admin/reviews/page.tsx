@@ -72,7 +72,11 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/admin/re
                 <div className="flex min-w-0 flex-[1_1_14rem] flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2">
                     <Pill tone="soft2">{REVIEW_KIND_LABEL[r.kind]}</Pill>
-                    <Link href={`/admin/reviews/${r.id}`} className="font-display text-lg font-bold break-words hover:text-accent-ink">
+                    <Link
+                      href={`/admin/reviews/${r.id}`}
+                      // At least 44 px wide, and the ring adds 8 px above and below: a 44 px target.
+                      className="relative min-w-11 font-display text-lg font-bold break-words after:absolute after:inset-x-0 after:-inset-y-2 hover:text-accent-ink"
+                    >
                       {r.title}
                     </Link>
                   </span>

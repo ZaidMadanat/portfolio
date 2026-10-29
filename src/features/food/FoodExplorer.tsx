@@ -196,7 +196,8 @@ function FoodIndex({
                   type="button"
                   aria-label={`Remove ${c}`}
                   onClick={() => set({ cuisines: query.cuisines.filter((x) => x !== c) })}
-                  className="inline-flex size-9 cursor-pointer items-center justify-center rounded-full hover:bg-bg"
+                  // A 36 px circle inside the 44 px chip; the ring widens the hit area to 44.
+                  className="relative inline-flex size-9 cursor-pointer items-center justify-center rounded-full after:absolute after:-inset-1 after:rounded-full hover:bg-bg"
                 >
                   <svg aria-hidden="true" viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
                     <path d="m4 4 8 8M12 4l-8 8" />

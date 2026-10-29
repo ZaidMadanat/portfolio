@@ -9,6 +9,7 @@ import {
   setWorkerUrl,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "@/styles/map-controls.css";
 import "./food-map.css";
 import { useEffect, useRef, useState } from "react";
 import { BAY_AREA_BOUNDS, MAP_ATTRIBUTION, mapStyleFor } from "@/lib/map";

@@ -2,6 +2,7 @@
 
 import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "@/styles/map-controls.css";
 import { useEffect, useRef, useState } from "react";
 import { MAP_STYLE_LIGHT } from "@/lib/map";
 

@@ -80,7 +80,8 @@ export default async function PostsPage({ searchParams }: PageProps<"/admin/post
               <div className="flex min-w-0 flex-[1_1_16rem] flex-col gap-1">
                 <Link
                   href={`/admin/posts/${p.id}`}
-                  className="min-h-6 font-display text-lg font-bold break-words hover:text-accent-ink"
+                  // The ring adds 8 px above and below: a 44 px target for a one-line title.
+                  className="relative min-h-6 font-display text-lg font-bold break-words after:absolute after:inset-x-0 after:-inset-y-2 hover:text-accent-ink"
                 >
                   {p.title.trim() || "Untitled draft"}
                 </Link>
