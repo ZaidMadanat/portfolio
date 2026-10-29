@@ -40,10 +40,10 @@ test.describe("dashboard", () => {
     for (const label of ["Published posts", "Drafts", "Reviews", "Confirmed subscribers", "Views"]) {
       await expect(tile(label)).toHaveCount(1);
     }
-    // The seeded site: 8 published posts and 9 reviews (8 food, 1 film).
+    // The seeded site: 8 published posts and 15 reviews (8 food, 1 film, 4 albums, 2 concerts).
     await expect(tile("Published posts").getByTestId("stat-value")).toHaveText("8");
-    await expect(tile("Reviews").getByTestId("stat-value")).toHaveText("9");
-    await expect(tile("Reviews")).toContainText("8 food · 1 film · 0 albums · 0 concerts");
+    await expect(tile("Reviews").getByTestId("stat-value")).toHaveText("15");
+    await expect(tile("Reviews")).toContainText("8 food · 1 film · 4 albums · 2 concerts");
   });
 
   test("lists a draft with Continue", async ({ page }, info) => {

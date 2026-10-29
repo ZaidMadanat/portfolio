@@ -1,7 +1,7 @@
 // `npm run db:seed` (prisma db seed): always upserts the 7 built-in templates.
 // `SEED_FIXTURES=1 npm run db:seed` also adds DEV-ONLY SAMPLE DATA: 12 film logs
 // (Zaid's real April 2026 Letterboxd diary), 8 sample food places, a FILM review,
-// 8 sample posts (one with an old-slug redirect), top-4 film and album favourites and a sample stats.fm window.
+// 4 ALBUM and 2 CONCERT reviews, 8 sample posts (one with an old-slug redirect), top-4 film and album favourites and a sample stats.fm window.
 // Fixture ids start with "dev-fixture-" and fixtures refuse to run against a
 // non-local database. Re-running either mode is idempotent.
 
@@ -281,6 +281,33 @@ const ALBUM_LISTENS: { title: string; artist: string; year: number; streams: num
   { title: "IGOR", artist: "Tyler, The Creator", year: 2019, streams: 12 },
 ];
 
+/**
+ * Rated albums and concerts (ALBUM / CONCERT reviews). Dated before every
+ * place and the Ben-Hur review on purpose, so the hub's "Latest reviews" (the
+ * 6 newest) stays the same, and kept off the favourites and listening titles so
+ * the favourites picker has one choice per album. Kid A is linked to the
+ * "albums-on-repeat" post.
+ */
+const ALBUM_REVIEWS: { slug: string; title: string; artist: string; year: number; rating: number; date: string }[] = [
+  { slug: "kid-a", title: "Kid A", artist: "Radiohead", year: 2000, rating: 10, date: "2025-09-20" },
+  { slug: "channel-orange", title: "Channel Orange", artist: "Frank Ocean", year: 2012, rating: 10, date: "2025-08-02" },
+  { slug: "chromakopia", title: "Chromakopia", artist: "Tyler, The Creator", year: 2024, rating: 9, date: "2025-06-14" },
+  { slug: "brat", title: "Brat", artist: "Charli xcx", year: 2024, rating: 7, date: "2025-07-05" },
+];
+const KID_A_REVIEW_ID = "dev-fixture-review-album-kid-a";
+
+const CONCERT_REVIEWS: { slug: string; artist: string; venue: string; highlight: string; rating: number; date: string }[] = [
+  { slug: "khruangbin", artist: "Khruangbin", venue: "Greek Theatre, Berkeley", highlight: "the encore", rating: 8, date: "2025-10-04" },
+  {
+    slug: "fred-again",
+    artist: "Fred again..",
+    venue: "Bill Graham Civic, San Francisco",
+    highlight: "the lights in the last song",
+    rating: 9,
+    date: "2025-03-14",
+  },
+];
+
 const SAMPLE_NOTE = p("Sample post for local development.");
 
 type SamplePost = {
@@ -386,6 +413,7 @@ const POSTS: SamplePost[] = [
     excerpt: "What kept coming back on the walk to class.",
     category: "MUSIC",
     publishedAt: "2026-04-10",
+    reviewId: KID_A_REVIEW_ID,
     tags: ["playlists"],
     blocks: [
       p("A short list of records I didn't skip a track on."),
@@ -476,6 +504,18 @@ async function seedFixtures(db: PrismaClient) {
     create: { id: BEN_HUR_REVIEW_ID, ...benHur },
     update: benHur,
   });
+
+  // Rated albums and concerts.
+  for (const { slug, date, ...album } of ALBUM_REVIEWS) {
+    const id = `dev-fixture-review-album-${slug}`;
+    const data = { kind: "ALBUM" as const, date: day(date), ...album };
+    await db.review.upsert({ where: { id }, create: { id, ...data }, update: data });
+  }
+  for (const { slug, date, ...concert } of CONCERT_REVIEWS) {
+    const id = `dev-fixture-review-concert-${slug}`;
+    const data = { kind: "CONCERT" as const, title: concert.artist, date: day(date), ...concert };
+    await db.review.upsert({ where: { id }, create: { id, ...data }, update: data });
+  }
 
   // Favourites: unique on (kind, position), so upsert by that.
   const favorites = [

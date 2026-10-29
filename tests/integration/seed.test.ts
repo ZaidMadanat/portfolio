@@ -46,7 +46,26 @@ describe("seed", () => {
     expect(posts).toHaveLength(8);
     expect(posts.every((p) => p.html.length > 0)).toBe(true);
     const linked = posts.filter((p) => p.review);
-    expect(linked.map((p) => [p.review?.kind, p.review?.title])).toEqual([["FILM", "Ben-Hur"]]);
+    expect(linked.map((p) => [p.review?.kind, p.review?.title]).sort()).toEqual([
+      ["ALBUM", "Kid A"],
+      ["FILM", "Ben-Hur"],
+    ]);
+
+    // Rated albums and concerts for /reviews/music, all older than the places.
+    const music = await db.review.findMany({
+      where: { kind: { in: ["ALBUM", "CONCERT"] } },
+      orderBy: [{ kind: "asc" }, { date: "desc" }],
+    });
+    expect(music.map((r) => [r.kind, r.title, r.rating])).toEqual([
+      ["ALBUM", "Kid A", 10],
+      ["ALBUM", "Channel Orange", 10],
+      ["ALBUM", "Brat", 7],
+      ["ALBUM", "Chromakopia", 9],
+      ["CONCERT", "Khruangbin", 8],
+      ["CONCERT", "Fred again..", 9],
+    ]);
+    const oldestPlace = Math.min(...places.map((p) => p.date.getTime()));
+    expect(music.every((r) => r.date.getTime() < oldestPlace)).toBe(true);
 
     // One old slug that redirects to the Ben-Hur post.
     const redirects = await db.redirect.findMany({ include: { post: { select: { slug: true } } } });
