@@ -40,6 +40,22 @@
     box-shadow: 6px 6px 0 var(--color-ink);
   }
 
+  /* Posters sit slightly rotated; the tilt eases out (and the poster lifts)
+     while its card is hovered or focused. Rotation is the CSS rotate
+     property, which the Tailwind rotate-* utilities set. */
+  [data-motion="on"] .tilt-ease {
+    transition:
+      rotate 200ms ease-out,
+      transform 200ms ease-out;
+  }
+
+  [data-motion="on"] .tilt-ease:hover,
+  [data-motion="on"] :hover > .tilt-ease,
+  [data-motion="on"] :focus-within > .tilt-ease {
+    rotate: 0deg;
+    transform: translateY(-2px);
+  }
+
   [data-motion="on"] .pin-drop {
     animation: pin-drop 400ms ease-out both;
     animation-delay: calc(var(--i, 0) * 40ms);

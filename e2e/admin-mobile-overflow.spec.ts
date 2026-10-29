@@ -75,6 +75,7 @@ test.describe("public pages", () => {
     ["/reviews", h1()],
     // Once the map is up (its canvas and pins are absolutely positioned).
     ["/reviews/food", (page) => page.getByTestId("food-map").locator("canvas")],
+    ["/reviews/film", h1()],
     ["/contact", h1()],
     ["/subscribed?state=pending", h1()],
     ["/no-such-page", h1()],
