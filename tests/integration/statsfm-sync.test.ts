@@ -111,13 +111,24 @@ describe("syncStatsfm", () => {
     expect(await rowIds()).toEqual(OLD_IDS);
   });
 
-  it("an empty week keeps the previous snapshot and changes nothing", async () => {
+  // Spec §6.7: "On rotation this week" shows the last 7 days. A week with no
+  // listens is a successful answer, so the section must disappear.
+  it("an empty week clears last week's rows and revalidates, so the rotation hides", async () => {
     await seedPrevious();
+    await expect(syncStatsfm({ fetch: fakeFetch(JSON.stringify({ items: [] })), db, now })).resolves.toEqual({
+      itemsChanged: 6,
+    });
+    expect(await rowIds()).toEqual([]);
+    expect(cache.revalidateTag).toHaveBeenCalledTimes(2);
+    for (const tag of ["music", "home"]) expect(cache.revalidateTag).toHaveBeenCalledWith(tag, "max");
+    expect((await getMusic()).rotation).toEqual([]);
+  });
+
+  it("an empty week with nothing stored changes nothing", async () => {
     await expect(syncStatsfm({ fetch: fakeFetch(JSON.stringify({ items: [] })), db, now })).resolves.toEqual({
       itemsChanged: 0,
     });
-    expect(await rowIds()).toEqual(OLD_IDS);
-    expect(cache.revalidateTag).not.toHaveBeenCalled();
+    expect(await rowIds()).toEqual([]);
   });
 
   it("a failed write leaves the old rows in place", async () => {

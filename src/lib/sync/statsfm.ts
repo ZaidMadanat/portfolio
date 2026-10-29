@@ -99,8 +99,9 @@ function statsfmUser(): string {
  * Fetches last week's top albums and replaces every AlbumListen row in one
  * transaction, then revalidates `music` + `home`. A non-2xx, a network error,
  * a timeout or a bad shape throws before anything is written (Task 32 logs it).
- * An empty week keeps the previous snapshot: the site shows last week's albums
- * rather than an empty shelf.
+ * An empty week is a successful answer: the table is emptied, so "On rotation
+ * this week" hides (spec §6.7). Only failures keep the previous snapshot.
+ * `itemsChanged` is the number of rows written, or of rows cleared for an empty week.
  */
 export async function syncStatsfm(
   deps: StatsfmDeps = { fetch: globalThis.fetch, db: prisma },
@@ -123,12 +124,11 @@ export async function syncStatsfm(
     throw new SyncShapeError("stats.fm", "the body isn't JSON");
   }
   const albums = parseStatsfm(json);
-  if (albums.length === 0) return { itemsChanged: 0 };
 
-  await db.$transaction([
+  const [cleared] = await db.$transaction([
     db.albumListen.deleteMany(),
     db.albumListen.createMany({ data: albums.map((a) => ({ ...a, windowStart, windowEnd })) }),
   ]);
   revalidate();
-  return { itemsChanged: albums.length };
+  return { itemsChanged: albums.length > 0 ? albums.length : cleared.count };
 }
