@@ -5,7 +5,8 @@ import { useState, useTransition } from "react";
 
 // A destructive admin button with an inline "are you sure?" step. `action` is
 // a server action (bound to its row's id by the server page); after it runs
-// the page is refreshed from the server.
+// the page is refreshed from the server, or, with `redirectTo`, left for that
+// page (the thing it was about is gone).
 
 const BUTTON =
   "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border-2 px-4 font-bold disabled:cursor-not-allowed disabled:opacity-60";
@@ -19,9 +20,11 @@ type Props = {
   question: string;
   confirmLabel: string;
   errorMessage: string;
+  /** Go here once the action has run, instead of refreshing this page. */
+  redirectTo?: string;
 };
 
-export function ConfirmAction({ action, label, ariaLabel, question, confirmLabel, errorMessage }: Props) {
+export function ConfirmAction({ action, label, ariaLabel, question, confirmLabel, errorMessage, redirectTo }: Props) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +35,10 @@ export function ConfirmAction({ action, label, ariaLabel, question, confirmLabel
     startTransition(async () => {
       try {
         await action();
+        if (redirectTo) {
+          router.push(redirectTo);
+          return;
+        }
         setConfirming(false);
         router.refresh();
       } catch {

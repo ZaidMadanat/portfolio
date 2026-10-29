@@ -99,10 +99,10 @@ test("create a food review: geocoded address, region from the city, dishes, save
     await expect(row.getByRole("img", { name: "8 out of 10" })).toBeVisible();
 
     // Public: /reviews/food is static, and the save expired it, so the next
-    // load lists the new place beside the seeded Burma Superstar.
+    // load lists the new place beside the seeded Burma Superstar. (No total
+    // count: other "writes" specs add and remove places at the same time.)
     await page.goto("/reviews/food");
     const places = page.getByRole("list", { name: "Places" }).getByRole("listitem");
-    await expect(places).toHaveCount(9);
     await expect(places.filter({ hasText: "Burma Superstar" })).toHaveCount(2);
     await expect(page.getByTestId("food-map").getByRole("button", { name: "Burma Superstar, 8 out of 10" })).toHaveCount(2);
   } finally {
@@ -192,6 +192,52 @@ test("“Write one now” saves the review, starts a draft from its template and
   } finally {
     // The draft was never public; remove it directly, then the review through the admin.
     if (postId) await sql(`DELETE FROM "Post" WHERE id = $1`, [postId]);
+    await cleanUp(page, id);
+  }
+});
+
+test("delete a review from its edit page: confirm, back to the list, gone from admin and /reviews/food", async ({ page }) => {
+  const name = "Delete Me Diner";
+  let id = "";
+  try {
+    await page.goto("/admin/reviews/new?kind=FOOD");
+    await page.getByLabel("Name", { exact: true }).fill(name);
+    await page.getByLabel("Address", { exact: true }).fill("309 Clement St, San Francisco");
+    await page.getByLabel("Address", { exact: true }).blur();
+    await expect(page.getByLabel("Region")).toHaveValue("SAN_FRANCISCO");
+    await page.getByLabel("Cuisine").selectOption("Thai");
+    await page.getByRole("group", { name: "Price" }).getByRole("button", { name: "$", exact: true }).click();
+    await page.getByRole("group", { name: "Rating" }).getByRole("button", { name: "5", exact: true }).click();
+    await page.getByRole("textbox", { name: "Dish 1", exact: true }).fill("Pad see ew");
+    await page.getByRole("button", { name: "Save review" }).click();
+    await expect(page).toHaveURL(/\/admin\/reviews\/[a-z0-9]+\?saved=1$/);
+    id = reviewIdFromUrl(page);
+
+    const places = page.getByRole("list", { name: "Places" }).getByRole("listitem");
+    await page.goto("/reviews/food");
+    await expect(places.filter({ hasText: name })).toHaveCount(1);
+
+    await page.goto(`/admin/reviews/${id}`);
+    await page.getByRole("button", { name: "Delete review" }).click();
+    await expect(page.getByText("Delete this review? This can't be undone.")).toBeVisible();
+    // Cancel keeps it.
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("button", { name: "Delete review" })).toBeVisible();
+    expect(await sql(`SELECT id FROM "Review" WHERE id = $1`, [id])).toHaveLength(1);
+
+    await page.getByRole("button", { name: "Delete review" }).click();
+    await page.getByRole("button", { name: "Yes, delete it" }).click();
+    await expect(page).toHaveURL(/\/admin\/reviews$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Reviews" })).toBeVisible();
+    await expect(page.locator(`a[href="/admin/reviews/${id}"]`)).toHaveCount(0);
+    expect(await sql(`SELECT id FROM "Review" WHERE id = $1`, [id])).toHaveLength(0);
+    expect(await sql(`SELECT id FROM "Dish" WHERE "reviewId" = $1`, [id])).toHaveLength(0);
+
+    await page.goto("/reviews/food");
+    await expect(places.filter({ hasText: "Cheese Board Pizza" })).toHaveCount(1);
+    await expect(places.filter({ hasText: name })).toHaveCount(0);
+    await expect(page.getByTestId("food-map").getByRole("button", { name: `${name}, 5 out of 10` })).toHaveCount(0);
+  } finally {
     await cleanUp(page, id);
   }
 });
