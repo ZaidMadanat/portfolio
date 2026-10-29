@@ -32,7 +32,8 @@ export type ReviewsHub = {
 
 const LATEST_COUNT = 6;
 
-const KIND_PAGE: Record<ReviewKind, string> = {
+/** Each review kind's public page. */
+export const KIND_PAGE: Record<ReviewKind, string> = {
   FOOD: "/reviews/food",
   FILM: "/reviews/film",
   ALBUM: "/reviews/music",
@@ -54,6 +55,18 @@ function monthStart(now: Date): Date {
     month: "2-digit",
   }).format(now);
   return new Date(`${ym}-01T00:00:00.000Z`);
+}
+
+/** "Mexican · $ · Mission, San Francisco"; missing parts are skipped. */
+export function foodMeta(r: {
+  cuisine: string | null;
+  price: number | null;
+  neighbourhood: string | null;
+  city: string | null;
+}): string {
+  return [r.cuisine, r.price ? priceLabel(r.price) : null, [r.neighbourhood, r.city].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 const opt = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;
@@ -98,13 +111,7 @@ const loadHub = cached(
       let meta: string;
       switch (r.kind) {
         case "FOOD":
-          meta = [
-            r.cuisine,
-            r.price ? priceLabel(r.price) : null,
-            [r.neighbourhood, r.city].filter(Boolean).join(", "),
-          ]
-            .filter(Boolean)
-            .join(" · ");
+          meta = foodMeta(r);
           break;
         case "FILM":
           meta = `Watched ${formatMonthDay(r.filmLog?.watchedAt ?? r.date)}`;

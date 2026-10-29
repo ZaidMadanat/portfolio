@@ -48,6 +48,12 @@ describe("seed", () => {
     const linked = posts.filter((p) => p.review);
     expect(linked.map((p) => [p.review?.kind, p.review?.title])).toEqual([["FILM", "Ben-Hur"]]);
 
+    // One old slug that redirects to the Ben-Hur post.
+    const redirects = await db.redirect.findMany({ include: { post: { select: { slug: true } } } });
+    expect(redirects.map((r) => [r.fromSlug, r.post.slug])).toEqual([
+      ["ben-hur-at-sixty-seven", "ben-hur-sixty-seven-years-later"],
+    ]);
+
     const benHurReview = await db.review.findFirstOrThrow({
       where: { kind: "FILM" },
       include: { filmLog: true },

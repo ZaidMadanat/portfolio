@@ -1,0 +1,330 @@
+/* Post body styles for the stored Post.html (spec §6.3, §7.2). The HTML is
+   BlockNote's server render, so every hook here is one of its wrappers:
+   div.bn-block-group > div.bn-block-outer > div.bn-block >
+   div.bn-block-content[data-content-type=…] > .bn-inline-content.
+   tests/unit/prose.test.ts checks these names against a real render. Colours
+   are the Citrus Pop tokens, so dark mode follows the .dark class. */
+
+.prose {
+  font-size: 1.1875rem;
+  line-height: 1.75;
+  color: var(--color-ink);
+  overflow-wrap: break-word;
+}
+
+/* ---------------------------------------------------------- block rhythm */
+
+.prose .bn-block-outer + .bn-block-outer {
+  margin-top: 1.25rem;
+}
+
+/* Consecutive list items sit closer together. */
+.prose
+  .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type$="ListItem"])
+  + .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type$="ListItem"]) {
+  margin-top: 0.5rem;
+}
+
+/* Nested blocks (list children, toggle bodies) indent. */
+.prose .bn-block .bn-block-group {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.prose .bn-block .bn-block-group > .bn-block-outer + .bn-block-outer {
+  margin-top: 0.5rem;
+}
+
+/* ---------------------------------------------------------- text */
+
+.prose [data-content-type="paragraph"] p {
+  margin: 0;
+}
+
+.prose [data-content-type="heading"] .bn-inline-content {
+  margin: 0;
+  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.prose .bn-block-outer:has(> .bn-block > [data-content-type="heading"]) {
+  margin-top: 2.25rem;
+}
+
+.prose .bn-block-group > .bn-block-outer:first-child {
+  margin-top: 0;
+}
+
+.prose [data-content-type="heading"][data-level="1"] .bn-inline-content {
+  font-size: 2.25rem;
+}
+
+.prose [data-content-type="heading"][data-level="2"] .bn-inline-content {
+  font-size: 1.875rem;
+}
+
+.prose [data-content-type="heading"][data-level="3"] .bn-inline-content {
+  font-size: 1.4375rem;
+}
+
+.prose a {
+  color: var(--color-accent-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose strong {
+  font-weight: 700;
+}
+
+.prose :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--color-soft);
+  font-size: 0.875em;
+}
+
+/* Editor text colours, mapped onto the palette. */
+.prose [data-style-type="textColor"][data-value="gray"],
+.prose [data-style-type="textColor"][data-value="brown"] {
+  color: var(--color-muted);
+}
+
+.prose [data-style-type="textColor"]:is(
+    [data-value="red"],
+    [data-value="orange"],
+    [data-value="yellow"],
+    [data-value="pink"]
+  ) {
+  color: var(--color-accent-ink);
+}
+
+.prose [data-style-type="textColor"]:is([data-value="blue"], [data-value="purple"], [data-value="green"]) {
+  color: var(--color-second);
+}
+
+.prose [data-style-type="backgroundColor"] {
+  padding: 0 0.2em;
+  border-radius: 4px;
+  background: var(--color-soft);
+}
+
+.prose [data-style-type="backgroundColor"]:is(
+    [data-value="blue"],
+    [data-value="purple"],
+    [data-value="green"],
+    [data-value="gray"]
+  ) {
+  background: var(--color-soft2);
+}
+
+/* ---------------------------------------------------------- lists */
+
+.prose [data-content-type="bulletListItem"],
+.prose [data-content-type="numberedListItem"],
+.prose [data-content-type="checkListItem"] {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.prose [data-content-type="bulletListItem"]::before {
+  content: "";
+  flex: none;
+  width: 0.45em;
+  height: 0.45em;
+  margin-top: 0.68em;
+  border-radius: 999px;
+  background: var(--color-accent);
+  outline: 2px solid var(--color-ink);
+}
+
+.prose [data-content-type="numberedListItem"]::before {
+  content: attr(data-index) ".";
+  flex: none;
+  min-width: 1.25em;
+  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  color: var(--color-accent-ink);
+}
+
+.prose [data-content-type="checkListItem"] input {
+  width: 1.1em;
+  height: 1.1em;
+  margin-top: 0.35em;
+  accent-color: var(--color-accent);
+}
+
+.prose [data-content-type="checkListItem"][data-checked="true"] .bn-inline-content {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.prose [data-content-type$="ListItem"] .bn-inline-content {
+  margin: 0;
+  min-width: 0;
+}
+
+/* Toggles can't collapse on the public page; they read as a bold lead-in. */
+.prose .bn-toggle-wrapper > svg {
+  display: none;
+}
+
+.prose [data-content-type="toggleListItem"] .bn-inline-content {
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------- pull quote */
+
+.prose [data-content-type="quote"] blockquote {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0;
+  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.625rem, 4vw, 2.125rem);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-accent-ink);
+  rotate: -1deg;
+}
+
+.prose [data-content-type="quote"] blockquote::before {
+  content: "\201C";
+}
+
+.prose [data-content-type="quote"] blockquote::after {
+  content: "\201D";
+}
+
+/* ---------------------------------------------------------- images */
+
+.prose [data-content-type="image"] .bn-file-block-content-wrapper {
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prose .bn-visual-media-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+/* The stored width is the editor's preview width; never wider than the column. */
+.prose img.bn-visual-media {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 3px solid var(--color-ink);
+  border-radius: 20px;
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+
+.prose .bn-file-caption {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------- code */
+
+.prose [data-content-type="codeBlock"] pre {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  border: 2px solid var(--color-ink);
+  border-radius: 16px;
+  background: var(--color-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.prose [data-content-type="codeBlock"] pre code {
+  white-space: pre;
+}
+
+/* ---------------------------------------------------------- math */
+
+.prose [data-content-type="math"] .math {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.prose .katex-display {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- callouts */
+
+.prose [data-content-type="callout"] .callout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-ink);
+  border-radius: 20px;
+  font-size: 1.0625rem;
+}
+
+.prose .callout::before {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.prose .callout-tip {
+  background: var(--color-soft2);
+}
+
+.prose .callout-tip::before {
+  content: "Tip";
+}
+
+.prose .callout-warning {
+  background: var(--color-soft);
+}
+
+.prose .callout-warning::before {
+  content: "Heads up";
+}
+
+.prose .callout .bn-inline-content {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- divider, table */
+
+.prose [data-content-type="divider"] hr {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 2px dashed var(--color-line);
+}
+
+.prose [data-content-type="table"] .tableWrapper {
+  overflow-x: auto;
+}
+
+.prose [data-content-type="table"] table {
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.prose [data-content-type="table"] :is(td, th) {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--color-line);
+  vertical-align: top;
+}
+
+.prose [data-content-type="table"] th {
+  font-weight: 700;
+  background: var(--color-soft);
+}

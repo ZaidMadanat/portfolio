@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
-import { getPublishedPosts } from "@/lib/queries/posts";
+import { getKeepReading, getPostBySlug, getPublishedPosts, getRedirectSlugs } from "@/lib/queries/posts";
 import { resetDb } from "./reset";
 
 // Outside Next there's no incremental cache: run the tagged reads directly.
@@ -67,5 +67,117 @@ describe("getPublishedPosts", () => {
 
   it("returns an empty list for an empty database", async () => {
     expect(await getPublishedPosts()).toEqual([]);
+  });
+});
+
+async function publish(slug: string, extra: Record<string, unknown> = {}) {
+  return db.post.create({
+    data: {
+      ...base,
+      slug,
+      title: slug,
+      category: "FILM",
+      status: "PUBLISHED",
+      publishedAt: new Date("2026-04-27T19:00:00.000Z"),
+      ...extra,
+    },
+  });
+}
+
+describe("getPostBySlug", () => {
+  it("returns the post with its rating box when it's linked to a review", async () => {
+    const log = await db.filmLog.create({
+      data: {
+        letterboxdGuid: "letterboxd-watch-1",
+        entryType: "WATCH",
+        title: "Ben-Hur",
+        year: 1959,
+        stars: 5,
+        rating: 10,
+        watchedAt: new Date("2026-04-26T00:00:00.000Z"),
+        posterUrl: "https://a.ltrbxd.com/ben-hur.jpg",
+        url: "https://letterboxd.com/itsMaday/film/ben-hur-1959/",
+      },
+    });
+    const review = await db.review.create({
+      data: { kind: "FILM", title: "Ben-Hur", rating: 10, date: new Date("2026-04-26"), filmLogId: log.id },
+    });
+    const post = await publish("ben-hur", { reviewId: review.id, html: "<p>Body</p>" });
+    await tag(post.id, "epics");
+
+    const result = await getPostBySlug("ben-hur");
+    expect(result && "post" in result).toBe(true);
+    if (!result || !("post" in result)) return;
+    expect(result.post).toMatchObject({ id: post.id, slug: "ben-hur", html: "<p>Body</p>", tags: ["epics"], rating: 10 });
+    expect(result.post.review).toEqual({
+      kind: "FILM",
+      title: "Ben-Hur (1959)",
+      meta: "Watched Apr 26, 2026",
+      rating: 10,
+      imageUrl: "https://a.ltrbxd.com/ben-hur.jpg",
+      href: "/reviews/film",
+    });
+  });
+
+  it("drops the rating box, without throwing, once the linked review is deleted (Review Focus 5)", async () => {
+    const review = await db.review.create({
+      data: { kind: "FOOD", title: "La Taqueria", rating: 9, date: new Date("2026-03-14"), cuisine: "Mexican", price: 1, neighbourhood: "Mission", city: "San Francisco" },
+    });
+    await publish("burritos", { reviewId: review.id, category: "FOOD" });
+    const before = await getPostBySlug("burritos");
+    expect(before && "post" in before && before.post.review).toMatchObject({
+      kind: "FOOD",
+      title: "La Taqueria",
+      meta: "Mexican · $ · Mission, San Francisco",
+      href: "/reviews/food",
+    });
+
+    await db.review.delete({ where: { id: review.id } });
+
+    const after = await getPostBySlug("burritos");
+    expect(after && "post" in after).toBe(true);
+    if (!after || !("post" in after)) return;
+    expect(after.post.review).toBeNull();
+    expect(after.post.rating).toBeNull();
+  });
+
+  it("sends an old slug to the current one", async () => {
+    const post = await publish("new-slug");
+    await db.redirect.create({ data: { fromSlug: "old-slug", postId: post.id } });
+    expect(await getPostBySlug("old-slug")).toEqual({ redirectTo: "/blog/new-slug" });
+  });
+
+  it("returns null for an unknown slug, a draft, and a redirect to a draft", async () => {
+    const draft = await db.post.create({ data: { ...base, slug: "draft", title: "Draft", category: "NOTES" } });
+    await db.redirect.create({ data: { fromSlug: "old-draft", postId: draft.id } });
+    const live = await publish("live");
+    await db.redirect.create({ data: { fromSlug: "old-live", postId: live.id } });
+    // Only old slugs of published posts are prerendered.
+    expect(await getRedirectSlugs()).toEqual(["old-live"]);
+    expect(await getPostBySlug("nope")).toBeNull();
+    expect(await getPostBySlug("draft")).toBeNull();
+    expect(await getPostBySlug("old-draft")).toBeNull();
+  });
+});
+
+describe("getKeepReading", () => {
+  it("prefers two posts from the same category, then fills with the most recent", async () => {
+    const day = (d: string) => new Date(`2026-${d}T19:00:00.000Z`);
+    const current = await publish("current", { category: "FILM", publishedAt: day("04-20") });
+    await publish("film-old", { category: "FILM", publishedAt: day("01-01") });
+    await publish("film-new", { category: "FILM", publishedAt: day("03-01") });
+    await publish("film-third", { category: "FILM", publishedAt: day("02-01") });
+    await publish("notes-latest", { category: "NOTES", publishedAt: day("04-25") });
+
+    const same = await getKeepReading({ id: current.id, category: "Film" });
+    expect(same.map((p) => p.slug)).toEqual(["film-new", "film-third"]);
+
+    const onlyOne = await getKeepReading({ id: current.id, category: "Notes" });
+    expect(onlyOne.map((p) => p.slug)).toEqual(["notes-latest", "film-new"]);
+  });
+
+  it("returns nothing when the post is the only one", async () => {
+    const only = await publish("only");
+    expect(await getKeepReading({ id: only.id, category: "Film" })).toEqual([]);
   });
 });

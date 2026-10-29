@@ -1,7 +1,7 @@
 // `npm run db:seed` (prisma db seed): always upserts the 7 built-in templates.
 // `SEED_FIXTURES=1 npm run db:seed` also adds DEV-ONLY SAMPLE DATA: 12 film logs
 // (Zaid's real April 2026 Letterboxd diary), 8 sample food places, a FILM review,
-// 8 sample posts, top-4 film and album favourites and a sample stats.fm window.
+// 8 sample posts (one with an old-slug redirect), top-4 film and album favourites and a sample stats.fm window.
 // Fixture ids start with "dev-fixture-" and fixtures refuse to run against a
 // non-local database. Re-running either mode is idempotent.
 
@@ -295,6 +295,11 @@ type SamplePost = {
 
 const BEN_HUR_REVIEW_ID = "dev-fixture-review-ben-hur";
 
+/** An old slug that 308-redirects to a post's current slug (spec §7.3). */
+const REDIRECTS: { fromSlug: string; toSlug: string }[] = [
+  { fromSlug: "ben-hur-at-sixty-seven", toSlug: "ben-hur-sixty-seven-years-later" },
+];
+
 const POSTS: SamplePost[] = [
   {
     slug: "notes-on-spaced-repetition",
@@ -531,6 +536,15 @@ async function seedFixtures(db: PrismaClient) {
       const tag = await db.tag.upsert({ where: { name }, create: { name }, update: {} });
       await db.postTag.create({ data: { postId: saved.id, tagId: tag.id } });
     }
+  }
+
+  for (const r of REDIRECTS) {
+    const post = await db.post.findUniqueOrThrow({ where: { slug: r.toSlug }, select: { id: true } });
+    await db.redirect.upsert({
+      where: { fromSlug: r.fromSlug },
+      create: { id: `dev-fixture-redirect-${r.fromSlug}`, fromSlug: r.fromSlug, postId: post.id },
+      update: { postId: post.id },
+    });
   }
 }
 
