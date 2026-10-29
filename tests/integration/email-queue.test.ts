@@ -350,3 +350,74 @@ describe("routes", () => {
     expect(await status("reader0@example.com")).toBe("CONFIRMED");
   });
 });
+
+// Cron and "Run sync now" can drain at the same moment (decision "Email queue lock").
+describe("drainEmailQueue under concurrency", () => {
+  /** Records every recipient; each batch takes a few ms, so two drains interleave. */
+  function slowMailer() {
+    const to: string[] = [];
+    const mailer = {
+      to,
+      async sendBatch(msgs: Msg[]) {
+        await new Promise((r) => setTimeout(r, 5));
+        to.push(...msgs.map((m) => m.to));
+        return { sent: msgs.length, quotaHit: false };
+      },
+    };
+    return mailer;
+  }
+
+  it("two drains in parallel send each of 150 emails exactly once", async () => {
+    const post = await publishedPost();
+    await confirmedSubscribers(150);
+    expect(await enqueuePostNotification(post.id)).toBe(150);
+
+    const mailer = slowMailer();
+    const [a, b] = await Promise.all([
+      drainEmailQueue(mailer, { chunk: 20 }),
+      drainEmailQueue(mailer, { chunk: 20 }),
+    ]);
+
+    expect(mailer.to).toHaveLength(150);
+    expect(new Set(mailer.to).size).toBe(150);
+    expect(a.sent + b.sent).toBe(150);
+    expect(a.remaining).toBe(0);
+    expect(b.remaining).toBe(0);
+    expect(await db.emailSend.count({ where: { status: "SENT" } })).toBe(150);
+    expect(await notifiedAt(post.id)).toBeInstanceOf(Date);
+  });
+
+  it("a claim older than 30 minutes (a crashed drain) goes back to the queue; a fresh one is left alone", async () => {
+    const post = await publishedPost();
+    await confirmedSubscribers(2);
+    await enqueuePostNotification(post.id);
+    const [stale, fresh] = await db.emailSend.findMany({ orderBy: { id: "asc" } });
+    const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+    await db.emailSend.update({ where: { id: stale.id }, data: { status: "SENDING", claimedAt: minutesAgo(31) } });
+    await db.emailSend.update({ where: { id: fresh.id }, data: { status: "SENDING", claimedAt: minutesAgo(5) } });
+
+    const mailer = slowMailer();
+    expect(await drainEmailQueue(mailer)).toEqual({ sent: 1, remaining: 0 });
+    expect(await db.emailSend.findUniqueOrThrow({ where: { id: stale.id } })).toMatchObject({ status: "SENT" });
+    expect(await db.emailSend.findUniqueOrThrow({ where: { id: fresh.id } })).toMatchObject({ status: "SENDING" });
+    // Still in flight elsewhere, so the post isn't marked notified yet.
+    expect(await notifiedAt(post.id)).toBeNull();
+  });
+
+  it("a mailer error puts the claimed rows back in the queue and rethrows", async () => {
+    const post = await publishedPost();
+    await confirmedSubscribers(3);
+    await enqueuePostNotification(post.id);
+    const failing = { sendBatch: async () => Promise.reject(new Error("Resend batch send failed: HTTP 422 validation_error")) };
+    await expect(drainEmailQueue(failing)).rejects.toThrow(/422/);
+    expect(await db.emailSend.count({ where: { status: "QUEUED", claimedAt: null } })).toBe(3);
+  });
+
+  it("returns unsent rows of a short batch to the queue", async () => {
+    const post = await publishedPost();
+    await confirmedSubscribers(5);
+    await enqueuePostNotification(post.id);
+    expect(await drainEmailQueue(fakeMailer({ dailyLimit: 2 }), { chunk: 5 })).toEqual({ sent: 2, remaining: 3 });
+    expect(await db.emailSend.count({ where: { status: "SENDING" } })).toBe(0);
+  });
+});

@@ -60,6 +60,8 @@ enum SubscriberStatus {
 
 enum EmailSendStatus {
   QUEUED
+  /// Claimed by a running drain (claimedAt says when); never picked by another drain.
+  SENDING
   SENT
   FAILED
 }
@@ -375,6 +377,8 @@ model EmailSend {
   post         Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
   subscriber   Subscriber      @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
   status       EmailSendStatus @default(QUEUED)
+  /// Set when a drain claims the row (status SENDING); stale claims are re-queued.
+  claimedAt    DateTime?
   sentAt       DateTime?
   createdAt    DateTime        @default(now())
 
