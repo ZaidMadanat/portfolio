@@ -66,22 +66,27 @@ function toSummary(p: SummaryRow): PostSummary {
 
 const published = { status: "PUBLISHED", publishedAt: { not: null } } as const;
 
-const loadPublished = cached(
-  async (): Promise<PostSummary[]> => {
-    const rows = await db.post.findMany({
-      where: published,
-      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      select: summarySelect,
-    });
-    return rows.map(toSummary);
-  },
-  [TAGS.posts],
-  "posts:published",
-);
+async function queryPublished(): Promise<PostSummary[]> {
+  const rows = await db.post.findMany({
+    where: published,
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    select: summarySelect,
+  });
+  return rows.map(toSummary);
+}
+
+const loadPublished = cached(queryPublished, [TAGS.posts], "posts:published");
 
 /** Every published post, newest first (spec §6.2). Tagged `posts`. */
 export function getPublishedPosts(): Promise<PostSummary[]> {
   return loadPublished();
+}
+
+const loadFeed = cached(queryPublished, [TAGS.rss, TAGS.posts], "rss:posts");
+
+/** The same list for /rss.xml (spec §6.9). Tagged `rss` and `posts` (spec §7.3). */
+export function getFeedPosts(): Promise<PostSummary[]> {
+  return loadFeed();
 }
 
 // ---------------------------------------------------------------- post page

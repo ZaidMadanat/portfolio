@@ -133,6 +133,20 @@ test.describe("blog index, seeded database", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Email updates" })).toBeVisible();
   });
 
+  test("the RSS link serves the feed with every published post", async ({ page, request }) => {
+    await page.goto("/blog");
+    await expect(page.locator('head link[rel="alternate"][type="application/rss+xml"]')).toHaveAttribute(
+      "href",
+      /\/rss\.xml$/,
+    );
+    const res = await request.get("/rss.xml");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("application/rss+xml; charset=utf-8");
+    const xml = await res.text();
+    expect(xml).toMatch(/<channel>\s*<title>Zaid Madanat<\/title>/);
+    expect(xml.match(/<item>/g)).toHaveLength(8);
+  });
+
   test("no horizontal scroll", async ({ page }) => {
     await page.goto("/blog");
     const overflow = await page.evaluate(

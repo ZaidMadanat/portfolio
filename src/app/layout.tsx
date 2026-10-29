@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Inter } from "next/font/google";
 import { Footer } from "@/components/site/Footer";
 import { Header } from "@/components/site/Header";
 import { ThemeProvider } from "@/components/site/ThemeProvider";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 import "../styles/motion.css";
 
@@ -19,12 +20,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: {
     default: "Zaid Madanat",
     template: "%s · Zaid Madanat",
   },
   description:
     "Zaid Madanat studies Statistics at UC Berkeley. Projects, a blog, and what he's watching, eating and listening to.",
+  // Feed discovery (spec §6.9).
+  alternates: { types: { "application/rss+xml": [{ url: "/rss.xml", title: "Zaid Madanat" }] } },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
