@@ -38,13 +38,13 @@ test.describe("admin auth", () => {
     await context.addCookies([{ name: "better-auth.session_token", value: "forged.token", url: SEEDED_URL }]);
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/admin\/sign-in$/);
-    await expect(page.getByRole("heading", { name: "Morning, Zaid." })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^(Morning|Afternoon|Evening), Zaid\.$/ })).toHaveCount(0);
   });
 
   test("the admin signs in and sees the dashboard shell", async ({ page }) => {
     await signIn(page, E2E_ADMIN_EMAIL);
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Morning, Zaid." })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^(Morning|Afternoon|Evening), Zaid\.$/ })).toBeVisible();
 
     const nav = page.getByRole("navigation", { name: "Admin" });
     await expect(nav.getByRole("link")).toHaveText(SIDEBAR);

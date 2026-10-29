@@ -10,7 +10,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { cpSync, rmSync } from "node:fs";
 import { prepareDatabase } from "./databases";
-import { EMPTY_DB_URL, EMPTY_PORT, EMPTY_URL, SEEDED_DB_URL, SEEDED_PORT } from "./servers";
+import { E2E_CRON_SECRET, EMPTY_DB_URL, EMPTY_PORT, EMPTY_URL, SEEDED_DB_URL, SEEDED_PORT } from "./servers";
 
 const EMPTY_DIST = ".next-e2e-empty";
 
@@ -18,6 +18,8 @@ const EMPTY_DIST = ".next-e2e-empty";
 // These are `next start` servers, so NODE_ENV is production here; auth.ts
 // refuses E2E_AUTH only on Vercel.
 process.env.E2E_AUTH = "1";
+// A known value, so admin-dashboard.spec.ts can check it never reaches a page.
+process.env.CRON_SECRET = E2E_CRON_SECRET;
 
 // Each build keys its unstable_cache entries by its own CACHE_BUILD_KEY
 // (next.config.ts), so the empty build's entries can't leak into the seeded one.

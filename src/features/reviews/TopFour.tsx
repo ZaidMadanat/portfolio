@@ -3,6 +3,7 @@ import { AlbumCover } from "@/components/ui/AlbumCover";
 import { PosterBlock } from "@/components/ui/PosterBlock";
 import { RatingStamp } from "@/components/ui/RatingStamp";
 import type { FavoriteView } from "@/lib/queries/reviews";
+import { TopFourAdminPrompt } from "./TopFourAdminPrompt";
 
 type Props = {
   kind: "film" | "album";
@@ -16,10 +17,10 @@ const COPY = {
 
 const TILTS = ["-rotate-1", "rotate-1", "-rotate-[0.5deg]", "rotate-[0.5deg]"];
 
-// Hidden when there are no favourites. TODO(Task 17+): show "Pick your top 4
-// in the admin" to a signed-in admin only, without making /reviews dynamic.
+// With no favourites, visitors see nothing; the signed-in admin gets a "Pick
+// your top 4 in the admin" prompt, decided in the browser so /reviews stays static.
 export function TopFour({ kind, items }: Props) {
-  if (items.length === 0) return null;
+  if (items.length === 0) return <TopFourAdminPrompt kind={kind} />;
   const copy = COPY[kind];
   const headingId = `top-${kind}s`;
   return (

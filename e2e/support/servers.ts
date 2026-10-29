@@ -19,3 +19,9 @@ function withDb(url: string, name: string): string {
 
 export const SEEDED_DB_URL = BASE;
 export const EMPTY_DB_URL = withDb(BASE, `${decodeURIComponent(new URL(BASE).pathname.slice(1))}_empty`);
+
+/**
+ * CRON_SECRET for both e2e servers (set by web-server.ts), so the dashboard
+ * spec can prove the value never reaches the browser. Not a real secret.
+ */
+export const E2E_CRON_SECRET = "e2e-cron-secret-6b1f0c9a4d";
