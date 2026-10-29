@@ -14,6 +14,11 @@ import { EMPTY_DB_URL, EMPTY_PORT, EMPTY_URL, SEEDED_DB_URL, SEEDED_PORT } from 
 
 const EMPTY_DIST = ".next-e2e-empty";
 
+// Admin e2e signs in with the email+password test accounts (src/lib/auth.ts).
+// These are `next start` servers, so NODE_ENV is production here; auth.ts
+// refuses E2E_AUTH only on Vercel.
+process.env.E2E_AUTH = "1";
+
 // Each build keys its unstable_cache entries by its own CACHE_BUILD_KEY
 // (next.config.ts), so the empty build's entries can't leak into the seeded one.
 function build(databaseUrl: string) {

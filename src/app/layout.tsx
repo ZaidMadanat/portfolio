@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
-import { Footer } from "@/components/site/Footer";
-import { Header } from "@/components/site/Header";
 import { ThemeProvider } from "@/components/site/ThemeProvider";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
@@ -40,19 +38,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${bricolage.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
-          <a
-            href="#main"
-            className="sr-only rounded-full border-2 border-ink bg-surface px-4 py-2 font-semibold focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
-          >
-            Skip to content
-          </a>
-          <Header />
-          <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-            {children}
-          </main>
-          <Footer />
-        </ThemeProvider>
+        {/* The frame lives in (site)/layout.tsx and admin/layout.tsx. */}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

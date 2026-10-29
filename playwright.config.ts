@@ -12,9 +12,12 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Creates the e2e admin and intruder accounts once (e2e/admin.setup.ts).
+    { name: "setup", testMatch: /\.setup\.ts$/ },
+    { name: "chromium", dependencies: ["setup"], use: { ...devices["Desktop Chrome"] } },
     {
       name: "mobile",
+      dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 375, height: 812 },

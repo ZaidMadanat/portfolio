@@ -41,7 +41,7 @@ const ALL_BLOCKS = [
   { type: "callout", props: { variant: "warning" }, content: "Warning" },
 ] as unknown as PartialPostBlock[];
 
-const css = readFileSync(join(process.cwd(), "src/app/blog/prose.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+const css = readFileSync(join(process.cwd(), "src/app/(site)/blog/prose.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
 let html = "";
 beforeAll(async () => {

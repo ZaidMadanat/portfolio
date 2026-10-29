@@ -21,8 +21,25 @@ const req = (path: string, method = "GET", vid?: string) =>
 beforeEach(() => resetMemoryStore());
 
 describe("proxy", () => {
-  it("only matches the counter APIs", () => {
-    expect(config.matcher).toEqual(["/api/likes/:path*", "/api/views/:path*"]);
+  it("only matches the counter APIs and the admin (public pages stay static)", () => {
+    expect(config.matcher).toEqual(["/api/likes/:path*", "/api/views/:path*", "/admin/:path*"]);
+  });
+
+  it("sends an admin request without a session cookie to sign-in", () => {
+    for (const path of ["/admin", "/admin/media", "/admin/posts/abc"]) {
+      const res = proxy(req(path));
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("http://localhost/admin/sign-in");
+      expect(res.cookies.get("vid")).toBeUndefined();
+    }
+  });
+
+  it("lets the sign-in page through, and any session cookie (the layout does the real check)", () => {
+    expect(proxy(req("/admin/sign-in")).headers.get("location")).toBeNull();
+    for (const name of ["better-auth.session_token", "__Secure-better-auth.session_token"]) {
+      const withCookie = new NextRequest("http://localhost/admin", { headers: { cookie: `${name}=t.sig` } });
+      expect(proxy(withCookie).headers.get("location")).toBeNull();
+    }
   });
 
   it("issues a vid cookie when missing and forwards it to the route", () => {
