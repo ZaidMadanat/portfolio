@@ -30,11 +30,12 @@ test.describe("admin pages", () => {
     await signInAsAdmin(page);
   });
 
-  test("dashboard, posts, templates and media", async ({ page }) => {
+  test("dashboard, posts, templates, media and favourites", async ({ page }) => {
     await expectNoSideScroll(page, "/admin", h1(/, Zaid\.$/));
     await expectNoSideScroll(page, "/admin/posts", h1("Posts"));
     await expectNoSideScroll(page, "/admin/templates", h1("Templates"));
     await expectNoSideScroll(page, "/admin/media", h1("Photo library"));
+    await expectNoSideScroll(page, "/admin/favourites", h1("Favourites"));
   });
 
   test("the editor for a seeded post", async ({ page }) => {
