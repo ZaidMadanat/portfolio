@@ -1,7 +1,8 @@
 import type { ReviewKind } from "@/generated/prisma/enums";
 import { cached, TAGS } from "@/lib/cache";
 import { db } from "@/lib/db";
-import { formatMonthDay, SITE_TIME_ZONE } from "@/lib/format";
+import { formatMonthDay } from "@/lib/format";
+import { getFilmMonthStats } from "@/lib/queries/films";
 import { displayedFilmRating } from "@/lib/rating";
 import { foodMeta } from "@/lib/reviews/meta";
 
@@ -50,25 +51,14 @@ function reviewHref(post: LinkedPost, fallback: string): string {
   return post?.status === "PUBLISHED" ? `/blog/${post.slug}` : fallback;
 }
 
-/** First day of the current month in Berkeley, as the UTC-midnight date FilmLog.watchedAt uses. */
-function monthStart(now: Date): Date {
-  const ym = new Intl.DateTimeFormat("en-CA", {
-    timeZone: SITE_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-  }).format(now);
-  return new Date(`${ym}-01T00:00:00.000Z`);
-}
-
 const opt = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;
 
 const postSelect = { select: { slug: true, status: true } } as const;
 
 const loadHub = cached(
-  async (): Promise<ReviewsHub> => {
-    const [food, filmThisMonth, favorites, reviews] = await Promise.all([
+  async (): Promise<Omit<ReviewsHub, "counts"> & { counts: { food: number } }> => {
+    const [food, favorites, reviews] = await Promise.all([
       db.review.count({ where: { kind: "FOOD" } }),
-      db.filmLog.count({ where: { watchedAt: { gte: monthStart(new Date()) } } }),
       db.favorite.findMany({
         orderBy: { position: "asc" },
         include: {
@@ -125,7 +115,7 @@ const loadHub = cached(
     });
 
     return {
-      counts: { food, filmThisMonth },
+      counts: { food },
       topFilms: favorites.filter((f) => f.kind === "FILM").map(toView),
       topAlbums: favorites.filter((f) => f.kind === "ALBUM").map(toView),
       latest,
@@ -135,7 +125,13 @@ const loadHub = cached(
   "reviews:hub",
 );
 
-/** The /reviews hub data (spec §6.4). Empty tables give zero counts and empty lists. */
-export function getReviewsHub(): Promise<ReviewsHub> {
-  return loadHub();
+/**
+ * The /reviews hub data (spec §6.4). Empty tables give zero counts and empty lists.
+ * The film tile's month count comes from `getFilmMonthStats`, the film page's
+ * own numbers (logs and hand-entered FILM reviews), worked out at render like
+ * the film page's, so the two never disagree.
+ */
+export async function getReviewsHub(now: Date = new Date()): Promise<ReviewsHub> {
+  const [hub, film] = await Promise.all([loadHub(), getFilmMonthStats(now)]);
+  return { ...hub, counts: { ...hub.counts, filmThisMonth: film.count } };
 }

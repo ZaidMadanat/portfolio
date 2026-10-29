@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilmFilters } from "@/features/film/FilmFilters";
 import { FilmStats } from "@/features/film/FilmStats";
 import { monthName } from "@/lib/film-stats";
-import { getFilmLogs, monthStats } from "@/lib/queries/films";
+import { getFilmLogs, getFilmMonthStats } from "@/lib/queries/films";
 
 export const metadata: Metadata = {
   title: "Film",
@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 export const revalidate = false;
 
 export default async function FilmPage() {
-  const cards = await getFilmLogs();
   const now = new Date();
-  const { count, average } = monthStats(cards, now);
+  // Same cached read twice: the stats are over exactly these cards.
+  const [cards, { count, average }] = await Promise.all([getFilmLogs(), getFilmMonthStats(now)]);
   return (
     <div className="flex flex-col gap-10">
       <header className="flex flex-wrap items-end justify-between gap-6">

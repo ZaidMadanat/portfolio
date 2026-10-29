@@ -1,8 +1,9 @@
 import { cached, TAGS } from "@/lib/cache";
 import { db } from "@/lib/db";
+import { monthStats } from "@/lib/film-stats";
 import { displayedFilmRating } from "@/lib/rating";
 
-export { monthStats } from "@/lib/film-stats";
+export { monthStats };
 
 // The /reviews/film data (spec §6.6): the most recent Letterboxd diary entries,
 // plus hand-entered FILM reviews that have no diary entry, in one grid.
@@ -91,4 +92,13 @@ function loadFilmLogs(limit: number) {
  */
 export function getFilmLogs(limit = 60): Promise<FilmCard[]> {
   return loadFilmLogs(limit);
+}
+
+/**
+ * "N films in <Month>" and the month's average, over exactly the cards
+ * /reviews/film shows (logs and manual FILM reviews, default limit). The film
+ * page and the /reviews hub both use it, so their counts always agree.
+ */
+export async function getFilmMonthStats(now: Date = new Date()): Promise<{ count: number; average: number | null }> {
+  return monthStats(await getFilmLogs(), now);
 }
