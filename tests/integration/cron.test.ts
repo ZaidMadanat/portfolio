@@ -274,8 +274,45 @@ describe("runSyncNow", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("housekeeping: copies the counters and today's snapshot, drains the queue and reports what it did", async () => {
+    const post = await db.post.create({
+      data: { slug: "p", title: "P", blocks: [], category: "NOTES", status: "PUBLISHED", publishedAt: new Date() },
+    });
+    const store = getStore();
+    for (let i = 0; i < 2; i++) await recordView(store, post.id);
+    const reader = await db.subscriber.create({
+      data: { email: "r@example.com", status: "CONFIRMED", confirmToken: "c", unsubscribeToken: "u" },
+    });
+    await db.emailSend.create({ data: { postId: post.id, subscriberId: reader.id } });
+
+    await expect(runSyncNow("HOUSEKEEPING")).resolves.toEqual({ ok: true, message: "Done · 1 counters changed · 1 emails sent" });
+    expect(await db.postStat.findUniqueOrThrow({ where: { postId: post.id } })).toMatchObject({ views: 2 });
+    expect(await db.postStatDaily.count({ where: { postId: post.id } })).toBe(1);
+    expect(await db.emailSend.findFirstOrThrow()).toMatchObject({ status: "SENT" });
+    expect(await db.syncRun.findFirstOrThrow()).toMatchObject({ source: "HOUSEKEEPING", ok: true, itemsChanged: 2 });
+  });
+
+  it("housekeeping run twice at once: both succeed, and each email goes out once", async () => {
+    const post = await db.post.create({
+      data: { slug: "p", title: "P", blocks: [], category: "NOTES", status: "PUBLISHED", publishedAt: new Date() },
+    });
+    await recordView(getStore(), post.id);
+    const readers = await Promise.all(
+      [1, 2, 3].map((n) =>
+        db.subscriber.create({ data: { email: `r${n}@example.com`, status: "CONFIRMED", confirmToken: `c${n}`, unsubscribeToken: `u${n}` } }),
+      ),
+    );
+    await db.emailSend.createMany({ data: readers.map((r) => ({ postId: post.id, subscriberId: r.id })) });
+
+    const results = await Promise.all([runSyncNow("HOUSEKEEPING"), runSyncNow("HOUSEKEEPING")]);
+    expect(results.map((r) => r.ok)).toEqual([true, true]);
+    expect(await db.emailSend.count({ where: { status: "SENT" } })).toBe(3);
+    expect(await db.postStat.count()).toBe(1);
+    expect(await db.postStatDaily.count()).toBe(1);
+  });
+
   it("rejects unknown sources and needs an admin session", async () => {
-    await expect(runSyncNow("HOUSEKEEPING" as never)).rejects.toThrow();
+    await expect(runSyncNow("NOPE" as never)).rejects.toThrow();
     admin.signedIn = false;
     await expect(runSyncNow("LETTERBOXD")).rejects.toThrow();
     expect(await db.syncRun.count()).toBe(0);

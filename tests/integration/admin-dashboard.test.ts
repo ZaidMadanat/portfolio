@@ -68,6 +68,7 @@ describe("getDashboard", () => {
       ["LETTERBOXD", null],
       ["STATSFM", null],
       ["STRAVA", null],
+      ["HOUSEKEEPING", null],
     ]);
   });
 
@@ -116,7 +117,7 @@ describe("getDashboard", () => {
     ]);
   });
 
-  it("shows the latest run per source and ignores housekeeping", async () => {
+  it("shows the latest run per source, housekeeping last", async () => {
     await db.syncRun.create({ data: { source: "LETTERBOXD", startedAt: daysAgo(2), finishedAt: daysAgo(2), ok: true, itemsChanged: 1 } });
     await db.syncRun.create({
       data: { source: "LETTERBOXD", startedAt: daysAgo(1), finishedAt: daysAgo(1), ok: true, itemsChanged: 3, message: "3 new logs" },
@@ -129,6 +130,7 @@ describe("getDashboard", () => {
       { source: "LETTERBOXD", lastRun: { startedAt: daysAgo(1), finishedAt: daysAgo(1), ok: true, message: "3 new logs", itemsChanged: 3 } },
       { source: "STATSFM", lastRun: { startedAt: daysAgo(1), finishedAt: null, ok: false, message: "stats.fm returned 500", itemsChanged: 0 } },
       { source: "STRAVA", lastRun: null },
+      { source: "HOUSEKEEPING", lastRun: { startedAt: daysAgo(1), finishedAt: null, ok: true, message: "", itemsChanged: 0 } },
     ]);
   });
 });
@@ -137,7 +139,7 @@ describe("getDashboard", () => {
 // with every outside call stubbed. Here: only the guards, which run first.
 describe("runSyncNow", () => {
   it("rejects unknown sources", async () => {
-    await expect(runSyncNow("HOUSEKEEPING" as never)).rejects.toThrow();
+    await expect(runSyncNow("NOPE" as never)).rejects.toThrow();
     expect(await db.syncRun.count()).toBe(0);
   });
 

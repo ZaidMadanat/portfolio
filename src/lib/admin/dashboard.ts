@@ -4,14 +4,18 @@ import { viewsWindow } from "@/lib/admin/views-window";
 
 // The admin dashboard's reads (spec §7). Callers check the admin session.
 
-/** The sources the dashboard shows, in order. Housekeeping isn't a source people run. */
-export const SYNC_SOURCES = ["LETTERBOXD", "STATSFM", "STRAVA"] as const;
+/**
+ * The jobs the dashboard shows, in order, each with its last run and a run-now
+ * button. Housekeeping (counter copy, daily snapshot, email queue) comes last.
+ */
+export const SYNC_SOURCES = ["LETTERBOXD", "STATSFM", "STRAVA", "HOUSEKEEPING"] as const;
 export type SyncSourceName = (typeof SYNC_SOURCES)[number];
 
 export const SYNC_SOURCE_LABEL: Record<SyncSourceName, string> = {
   LETTERBOXD: "Letterboxd",
   STATSFM: "stats.fm",
   STRAVA: "Strava",
+  HOUSEKEEPING: "Housekeeping",
 };
 
 const DRAFT_LIMIT = 5;

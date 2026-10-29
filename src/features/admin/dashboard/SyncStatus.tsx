@@ -6,7 +6,8 @@ import { runSyncNow } from "@/app/admin/actions";
 import type { SyncSourceName } from "@/lib/admin/dashboard";
 
 // Daily sync status per source (spec §7): the last run and a "Run sync now"
-// button, which calls a server action (the cron secret stays on the server).
+// button ("Run now" for housekeeping), which calls a server action (the cron
+// secret stays on the server).
 
 export type SyncRow = {
   source: SyncSourceName;
@@ -68,7 +69,7 @@ export function SyncStatus({ rows }: { rows: SyncRow[] }) {
                 disabled={running !== null}
                 className="inline-flex min-h-11 cursor-pointer items-center rounded-xl border-2 border-ink bg-surface px-3.5 font-bold text-ink hover:bg-soft disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {running === row.source ? "Running…" : "Run sync now"}{" "}
+                {running === row.source ? "Running…" : row.source === "HOUSEKEEPING" ? "Run now" : "Run sync now"}{" "}
                 <span className="sr-only">for {row.name}</span>
               </button>
             </li>

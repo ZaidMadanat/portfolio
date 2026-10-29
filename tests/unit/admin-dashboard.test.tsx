@@ -35,19 +35,21 @@ const rows = [
   { source: "LETTERBOXD", name: "Letterboxd", ok: true, detail: "Oct 29, 6:00 AM · 3 changed" },
   { source: "STATSFM", name: "stats.fm", ok: false, detail: "Oct 29, 6:00 AM · failed: stats.fm returned 500" },
   { source: "STRAVA", name: "Strava", ok: null, detail: "Never run" },
+  { source: "HOUSEKEEPING", name: "Housekeeping", ok: true, detail: "Oct 29, 6:30 AM · 2 changed" },
 ] as const;
 
 describe("SyncStatus", () => {
   beforeEach(() => actions.runSyncNow.mockReset());
   afterEach(() => router.refresh.mockReset());
 
-  it("lists each source with its last run and a Run sync now button", () => {
+  it("lists each source with its last run and a Run sync now button (Run now for housekeeping)", () => {
     render(<SyncStatus rows={[...rows]} />);
     for (const r of rows) {
-      expect(screen.getByRole("button", { name: `Run sync now for ${r.name}` })).toBeInTheDocument();
+      const button = r.source === "HOUSEKEEPING" ? "Run now" : "Run sync now";
+      expect(screen.getByRole("button", { name: `${button} for ${r.name}` })).toBeInTheDocument();
       expect(screen.getByText(r.detail)).toBeInTheDocument();
     }
-    expect(screen.getByText("OK")).toBeInTheDocument();
+    expect(screen.getAllByText("OK")).toHaveLength(2);
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
@@ -64,6 +66,18 @@ describe("SyncStatus", () => {
     actions.runSyncNow.mockResolvedValue({ ok: true, message: "3 changed" });
     render(<SyncStatus rows={[...rows]} />);
     fireEvent.click(screen.getByRole("button", { name: "Run sync now for Strava" }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+  });
+
+  it("housekeeping has a Run now button that runs it", async () => {
+    actions.runSyncNow.mockResolvedValue({ ok: true, message: "Done · 1 counters changed · 0 emails sent" });
+    render(<SyncStatus rows={[...rows]} />);
+    expect(screen.queryByRole("button", { name: "Run sync now for Housekeeping" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Run now for Housekeeping" }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Housekeeping: Done · 1 counters changed · 0 emails sent"),
+    );
+    expect(actions.runSyncNow).toHaveBeenCalledWith("HOUSEKEEPING");
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 

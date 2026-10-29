@@ -4,7 +4,8 @@ import { e2eId, sql } from "./support/db";
 import { E2E_CRON_SECRET, EMPTY_URL } from "./support/servers";
 
 // The admin dashboard (spec §7): greeting, quick-create links, stat tiles,
-// drafts with Continue, and sync status with "Run sync now" (a server action;
+// drafts with Continue, and sync status with "Run sync now" ("Run now" for
+// housekeeping; a server action;
 // the cron secret never reaches the browser). Also the Reviews hub's "Pick
 // your top 4" prompt, shown only to the signed-in admin on a static page.
 
@@ -63,7 +64,7 @@ test.describe("dashboard", () => {
     }
   });
 
-  test("each source shows its last run and a Run sync now button", async ({ page }) => {
+  test("each source shows its last run and a Run sync now button, housekeeping a Run now", async ({ page }) => {
     const id = e2eId();
     await sql(
       `INSERT INTO "SyncRun" (id, source, "startedAt", "finishedAt", ok, message, "itemsChanged") VALUES ($1, 'LETTERBOXD', now() + interval '1 day', now() + interval '1 day', true, '', 3)`,
@@ -72,10 +73,12 @@ test.describe("dashboard", () => {
     try {
       await page.goto("/admin");
       const sync = page.getByRole("list", { name: "Sync status" }).getByRole("listitem");
-      await expect(sync).toHaveCount(3);
+      await expect(sync).toHaveCount(4);
       for (const name of ["Letterboxd", "stats.fm", "Strava"]) {
         await expect(sync.filter({ hasText: name }).getByRole("button", { name: `Run sync now for ${name}` })).toBeVisible();
       }
+      await expect(sync.nth(3)).toContainText("Housekeeping");
+      await expect(sync.nth(3).getByRole("button", { name: "Run now for Housekeeping" })).toBeVisible();
       await expect(sync.filter({ hasText: "Letterboxd" })).toContainText("3 changed");
 
       // Locally the Strava guard refuses before any request (never the real API);
@@ -86,6 +89,17 @@ test.describe("dashboard", () => {
       );
       await expect(sync.filter({ hasText: "Strava" })).toContainText("Failed");
       await expect(sync.filter({ hasText: "Strava" })).toContainText("failed: Strava sync calls the real API only on Vercel");
+
+      // Housekeeping runs here for real: counters, today's snapshot, the email
+      // queue (logged locally, never sent). Its lock keeps the other project's
+      // run, at the same time, safe.
+      await page.getByRole("button", { name: "Run now for Housekeeping" }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Housekeeping:" })).toHaveText(
+        /^Housekeeping: Done · \d+ counters changed · \d+ emails sent/,
+      );
+      const housekeeping = sync.filter({ hasText: "Housekeeping" });
+      await expect(housekeeping).toContainText("OK");
+      await expect(housekeeping).not.toContainText("Never run");
     } finally {
       await sql(`DELETE FROM "SyncRun" WHERE id = $1 OR (source = 'STRAVA' AND ok = false)`, [id]);
     }
