@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { signInAsAdmin } from "./support/admin";
 import { e2eId, sql } from "./support/db";
+import { showFoodMap } from "./support/food";
 
 // No page scrolls sideways on a phone (spec: everything works at 375 px).
 // Wide content such as the subscribers table must scroll inside its own box.
@@ -16,9 +17,9 @@ test.beforeEach(({}, info) => {
   test.skip(info.project.name !== "mobile", "phone layout only");
 });
 
-async function expectNoSideScroll(page: Page, path: string, ready: (page: Page) => Locator) {
+async function expectNoSideScroll(page: Page, path: string, ready: (page: Page) => Locator | Promise<Locator>) {
   await page.goto(path);
-  await expect(ready(page)).toBeVisible();
+  await expect(await ready(page)).toBeVisible();
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scrollWidth, `${path} is ${scrollWidth}px wide`).toBeLessThanOrEqual(WIDTH);
 }
@@ -68,13 +69,13 @@ test.describe("admin pages", () => {
 });
 
 test.describe("public pages", () => {
-  const ROUTES: [string, (page: Page) => Locator][] = [
+  const ROUTES: [string, (page: Page) => Locator | Promise<Locator>][] = [
     ["/", h1()],
     ["/blog", h1()],
     [`/blog/${SEEDED_SLUG}`, h1()],
     ["/reviews", h1()],
     // Once the map is up (its canvas and pins are absolutely positioned).
-    ["/reviews/food", (page) => page.getByTestId("food-map").locator("canvas")],
+    ["/reviews/food", async (page) => (await showFoodMap(page)).locator("canvas")],
     ["/reviews/film", h1()],
     ["/reviews/music", h1()],
     ["/contact", h1()],

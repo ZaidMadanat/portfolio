@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { signInAsAdmin } from "./support/admin";
 import { sql } from "./support/db";
+import { showFoodMap } from "./support/food";
 
 // The admin review form (spec §7 Reviews). The servers run with GEOCODE_FAKE=1,
 // which knows exactly one address: "309 Clement St, San Francisco". Saving a
@@ -104,7 +105,7 @@ test("create a food review: geocoded address, region from the city, dishes, save
     await page.goto("/reviews/food");
     const places = page.getByRole("list", { name: "Places" }).getByRole("listitem");
     await expect(places.filter({ hasText: "Burma Superstar" })).toHaveCount(2);
-    await expect(page.getByTestId("food-map").getByRole("button", { name: "Burma Superstar, 8 out of 10" })).toHaveCount(2);
+    await expect((await showFoodMap(page)).getByRole("button", { name: "Burma Superstar, 8 out of 10" })).toHaveCount(2);
   } finally {
     await cleanUp(page, id);
   }
@@ -236,7 +237,9 @@ test("delete a review from its edit page: confirm, back to the list, gone from a
     await page.goto("/reviews/food");
     await expect(places.filter({ hasText: "Cheese Board Pizza" })).toHaveCount(1);
     await expect(places.filter({ hasText: name })).toHaveCount(0);
-    await expect(page.getByTestId("food-map").getByRole("button", { name: `${name}, 5 out of 10` })).toHaveCount(0);
+    const map = await showFoodMap(page);
+    await expect(map.locator("canvas.maplibregl-canvas")).toBeVisible();
+    await expect(map.getByRole("button", { name: `${name}, 5 out of 10` })).toHaveCount(0);
   } finally {
     await cleanUp(page, id);
   }

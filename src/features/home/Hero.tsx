@@ -37,11 +37,12 @@ export function Hero() {
       {/* The accent block sits inside the padding, so it never causes horizontal scroll. */}
       <div className="relative mx-auto w-full max-w-90 pr-4 pb-4 sm:pr-5 sm:pb-5">
         <div aria-hidden="true" className="absolute top-4 right-0 bottom-0 left-4 rounded-[36px] bg-accent sm:top-5 sm:left-5" />
+        {/* 720 px WebP: twice the 360 px box. The 800 px JPEG stays for Open Graph. */}
         <Image
-          src="/images/zaid.jpg"
+          src="/images/zaid-720.webp"
           alt="Zaid Madanat"
-          width={800}
-          height={1000}
+          width={720}
+          height={900}
           unoptimized
           preload
           sizes="360px"

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   bandTones,
@@ -33,11 +33,38 @@ import { PlaceList } from "./PlaceList";
 // Suspense fallback (every place, no filters); after hydration the URL
 // drives it, as on /blog.
 
-// MapLibre only loads here, in the browser, after the page is up.
+// MapLibre only loads here, in the browser, once the map's box is about to
+// scroll into view (useNearViewport). On a phone the map sits below the fold,
+// so a visitor who only reads the list never downloads or runs it.
 const FoodMap = dynamic(() => import("./FoodMap").then((m) => m.FoodMap), {
   ssr: false,
   loading: () => <MapPlaceholder />,
 });
+
+/** How far ahead of the viewport the map starts loading. */
+const MAP_LOAD_MARGIN = "200px 0px";
+
+/** True from the first time `ref` comes within MAP_LOAD_MARGIN of the viewport. */
+function useNearViewport(ref: RefObject<HTMLElement | null>): boolean {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || near) return;
+    if (typeof IntersectionObserver === "undefined") {
+      queueMicrotask(() => setNear(true));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setNear(true);
+      },
+      { rootMargin: MAP_LOAD_MARGIN },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, near]);
+  return near;
+}
 
 type Props = { places: Place[] };
 
@@ -129,6 +156,8 @@ function FoodIndex({
   const { resolvedTheme } = useTheme();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const card = useRef<HTMLElement>(null);
+  const slot = useRef<HTMLDivElement>(null);
+  const mapNear = useNearViewport(slot);
   const set = (patch: Partial<FoodQuery>) => onChange?.(patch);
 
   const options = useMemo(() => cuisineOptions(places), [places]);
@@ -221,13 +250,17 @@ function FoodIndex({
         {plural(shown.length, "place")}
       </p>
 
-      <div className="relative">
-        <FoodMap
-          places={shown}
-          selectedId={selected?.id ?? null}
-          onSelect={setSelectedId}
-          theme={resolvedTheme === "dark" ? "dark" : "light"}
-        />
+      <div ref={slot} data-testid="food-map-slot" className="relative">
+        {mapNear ? (
+          <FoodMap
+            places={shown}
+            selectedId={selected?.id ?? null}
+            onSelect={setSelectedId}
+            theme={resolvedTheme === "dark" ? "dark" : "light"}
+          />
+        ) : (
+          <MapPlaceholder />
+        )}
         {empty ? (
           <div className="absolute inset-0.5 z-10 grid place-items-center rounded-[26px] bg-bg/75 p-4">
             <div className="w-full max-w-md rounded-3xl bg-surface">

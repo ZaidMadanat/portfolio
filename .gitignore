@@ -58,3 +58,6 @@ agent-coordination.md
 
 # local dev photo store (src/lib/media/store.ts); production uses Vercel Blob
 /public/uploads/
+
+# Lighthouse CI reports (npm run lighthouse)
+/.lighthouseci/

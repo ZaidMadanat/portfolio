@@ -3,6 +3,8 @@ import { SEEDED_URL } from "./e2e/support/servers";
 
 /** Specs that change what public pages show (see the "writes" project). */
 const WRITES = /admin-(editor|review|favourites)\.spec\.ts$/;
+/** axe scans (Task 33): their own project, which sets each viewport itself. */
+const A11Y = /a11y\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,11 +19,11 @@ export default defineConfig({
   projects: [
     // Creates the e2e admin and intruder accounts once (e2e/admin.setup.ts).
     { name: "setup", testMatch: /\.setup\.ts$/ },
-    { name: "chromium", dependencies: ["setup"], testIgnore: WRITES, use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", dependencies: ["setup"], testIgnore: [WRITES, A11Y], use: { ...devices["Desktop Chrome"] } },
     {
       name: "mobile",
       dependencies: ["setup"],
-      testIgnore: WRITES,
+      testIgnore: [WRITES, A11Y],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 375, height: 812 },
@@ -29,6 +31,9 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    // Light and dark at 1280 and 375 px, against the seeded and empty builds.
+    // Reads only, so it needs no accounts (no `setup`).
+    { name: "a11y", testMatch: A11Y, use: { ...devices["Desktop Chrome"] } },
     // Specs that publish to public pages run last, once every other spec is
     // done, so those still see exactly the seeded posts. They tidy up after
     // themselves (unpublish), so a reused local server stays seeded too.
@@ -40,7 +45,7 @@ export default defineConfig({
     // rows (seen as /reviews keeping the previous favourites).
     {
       name: "writes",
-      dependencies: ["chromium", "mobile"],
+      dependencies: ["chromium", "mobile", "a11y"],
       testMatch: WRITES,
       workers: 1,
       use: { ...devices["Desktop Chrome"] },

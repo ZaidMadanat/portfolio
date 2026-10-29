@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { showFoodMap } from "./support/food";
 import { EMPTY_URL } from "./support/servers";
 
 // /reviews/food (spec §6.5) against the 8 seeded places. Map tiles come from
@@ -15,6 +16,7 @@ const filters = (page: Page) => page.getByRole("search", { name: "Filter places"
 async function open(page: Page, path = "/reviews/food") {
   await page.goto(path);
   await expect(page.getByRole("heading", { level: 1, name: "Food" })).toBeVisible();
+  await showFoodMap(page);
   await expect(map(page).locator("canvas.maplibregl-canvas")).toBeVisible();
 }
 
@@ -55,6 +57,29 @@ test.describe("food map, seeded database", () => {
     await expect(first).toHaveAttribute("aria-pressed", "false");
     // The required map credit, small (no decorative source labels).
     await expect(map(page).locator(".maplibregl-ctrl-attrib")).toContainText("OpenStreetMap");
+  });
+
+  test("on a phone, MapLibre loads only once the map scrolls near the viewport", async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile", "the map starts below the fold only on a phone");
+    const maplibre: string[] = [];
+    page.on("request", (req) => {
+      if (/maplibre/i.test(req.url())) maplibre.push(req.url());
+    });
+    await page.goto("/reviews/food");
+    await expect(rows(page)).toHaveCount(8);
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByTestId("map-placeholder")).toBeVisible();
+    await expect(page.locator("canvas")).toHaveCount(0);
+    expect(maplibre).toEqual([]);
+    // The list and filters work without the map.
+    await rows(page).filter({ hasText: "Comal" }).getByRole("button").click();
+    await expect(page.getByRole("article", { name: "Comal" })).toBeVisible();
+
+    await showFoodMap(page);
+    await expect(map(page).locator("canvas.maplibregl-canvas")).toBeVisible();
+    await expect(pins(page)).toHaveCount(8);
+    // The place picked before the map loaded is selected on it.
+    await expect(page.getByRole("button", { name: "Comal, 6 out of 10" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("the list is every place, newest first", async ({ page }) => {
