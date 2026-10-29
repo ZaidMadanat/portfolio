@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+
+export const metadata: Metadata = { title: "Page not found" };
 
 // Unknown URLs and notFound() render outside the (site) group's layout, so this
 // page brings the site frame itself.

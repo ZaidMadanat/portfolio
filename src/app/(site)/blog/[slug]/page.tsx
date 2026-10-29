@@ -8,6 +8,7 @@ import { RatingBox } from "@/features/blog/RatingBox";
 import { SubscribeBanner } from "@/features/blog/SubscribeBanner";
 import { formatDate, SITE_TIME_ZONE } from "@/lib/format";
 import { getKeepReading, getPostBySlug, getPublishedPosts, getRedirectSlugs } from "@/lib/queries/posts";
+import { OG_DEFAULTS } from "@/lib/site-metadata";
 import "../prose.css";
 
 // Static: every published slug is prerendered, and a slug published later
@@ -30,7 +31,14 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
     title: post.title,
     description: post.excerpt || undefined,
     alternates: { canonical: `/blog/${post.slug}` },
-    openGraph: { type: "article", title: post.title, description: post.excerpt || undefined, publishedTime: post.publishedAt },
+    openGraph: {
+      ...OG_DEFAULTS,
+      type: "article",
+      url: `/blog/${post.slug}`,
+      title: post.title,
+      description: post.excerpt || undefined,
+      publishedTime: post.publishedAt,
+    },
   };
 }
 
