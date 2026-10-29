@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [rebuild]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: site
+          POSTGRES_PASSWORD: site
+          POSTGRES_DB: site
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U site -d site"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Throwaway CI database credentials, not secrets. Same values as the local
+    # Docker DB (docker-compose.yml). Integration tests use their own
+    # `site_test` database, which their globalSetup creates and migrates.
+    env:
+      DATABASE_URL: postgresql://site:site@localhost:5433/site
+      TEST_DATABASE_URL: postgresql://site:site@localhost:5433/site_test
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # postinstall runs `prisma generate`.
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - run: npm run test:int
+
+      - run: npm run build
