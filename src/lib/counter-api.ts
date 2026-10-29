@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { visitorHash } from "./counters";
-import { allowRequest } from "./redis";
+import { allowRequest, RATE_LIMITS, type RateLimitPolicy } from "./redis";
 
 // Shared plumbing for /api/views/* and /api/likes/*.
 
@@ -36,11 +36,16 @@ export function likeSecret(): string {
   return "dev-only-like-secret";
 }
 
-/** Rate limit by a hashed client IP (never stored in the clear). */
-export async function rateLimited(req: NextRequest): Promise<boolean> {
-  const ip =
+/** The client IP as the platform reports it ("unknown" if absent). */
+export function clientIp(req: Request): string {
+  return (
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
-    "unknown";
-  return !(await allowRequest(await visitorHash(`ip:${ip}`, likeSecret())));
+    "unknown"
+  );
+}
+
+/** Rate limit by a hashed client IP (never stored in the clear). */
+export async function rateLimited(req: Request, policy: RateLimitPolicy = RATE_LIMITS.counters): Promise<boolean> {
+  return !(await allowRequest(await visitorHash(`ip:${clientIp(req)}`, likeSecret()), policy));
 }

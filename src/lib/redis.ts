@@ -65,19 +65,43 @@ export function resetMemoryStore(): void {
   sharedMemory = null;
 }
 
-let limiter: Ratelimit | null = null;
+export type RateLimitPolicy = {
+  /** Upstash key prefix; one limiter per prefix. */
+  prefix: string;
+  tokens: number;
+  window: `${number} ${"s" | "m" | "h"}`;
+};
+
+export const RATE_LIMITS = {
+  /** Views and likes: 30 per 10 s per hashed IP. */
+  counters: { prefix: "rl:counters", tokens: 30, window: "10 s" },
+  /** Sign-ups per hashed IP: each one can send a confirmation email. */
+  subscribeIp: { prefix: "rl:subscribe:ip", tokens: 5, window: "10 m" },
+  /** Sign-ups per hashed address, so nobody can flood one inbox from many IPs. */
+  subscribeEmail: { prefix: "rl:subscribe:email", tokens: 3, window: "1 h" },
+} as const satisfies Record<string, RateLimitPolicy>;
+
+const limiters = new Map<string, Ratelimit>();
 
 /**
- * 30 requests per 10 s sliding window per identifier (a hashed IP).
- * Always allows when Upstash isn't configured (tests, local dev).
+ * Sliding-window rate limit per identifier (a hash, never a raw IP or email).
+ * Defaults to the counters policy. Always allows when Upstash isn't configured
+ * (tests, local dev).
  */
-export async function allowRequest(identifier: string): Promise<boolean> {
+export async function allowRequest(
+  identifier: string,
+  policy: RateLimitPolicy = RATE_LIMITS.counters,
+): Promise<boolean> {
   if (!hasUpstash()) return true;
-  limiter ??= new Ratelimit({
-    redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(30, "10 s"),
-    prefix: "rl:counters",
-  });
+  let limiter = limiters.get(policy.prefix);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(policy.tokens, policy.window),
+      prefix: policy.prefix,
+    });
+    limiters.set(policy.prefix, limiter);
+  }
   const { success } = await limiter.limit(identifier);
   return success;
 }

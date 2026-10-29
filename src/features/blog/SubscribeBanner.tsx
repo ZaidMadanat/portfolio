@@ -1,26 +1,27 @@
 "use client";
 
 import { type FormEvent, useId, useState } from "react";
+import { type SubscribeState, SUBSCRIBE_STATES } from "./subscribe-states";
 
 type Props = { variant: "banner" | "box" };
 
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "done" | "error"; message: string };
 
-const MESSAGES = {
-  ok: "Almost there. Check your inbox for a confirmation link.",
-  // /api/subscribe arrives in Task 15; until then the route 404s.
-  closed: "Email sign-up isn't open yet. The RSS feed works in the meantime.",
-  invalid: "That email address doesn't look right.",
-  busy: "Too many tries. Wait a minute and try again.",
-  failed: "Something went wrong. Please try again later.",
-} as const;
+const result = (state: SubscribeState): Status => ({
+  kind: SUBSCRIBE_STATES[state].ok ? "done" : "error",
+  message: SUBSCRIBE_STATES[state].banner,
+});
 
-function messageFor(status: number): { kind: "done" | "error"; message: string } {
-  if (status >= 200 && status < 300) return { kind: "done", message: MESSAGES.ok };
-  if (status === 404 || status === 405) return { kind: "error", message: MESSAGES.closed };
-  if (status === 400 || status === 422) return { kind: "error", message: MESSAGES.invalid };
-  if (status === 429) return { kind: "error", message: MESSAGES.busy };
-  return { kind: "error", message: MESSAGES.failed };
+/** Maps the /api/subscribe response: 200 {status: "pending" | "already"}, 400 invalid, 429 busy. */
+async function statusFor(res: Response): Promise<Status> {
+  if (res.ok) {
+    const body: unknown = await res.json().catch(() => null);
+    const state = body && typeof body === "object" ? (body as { status?: unknown }).status : undefined;
+    return result(state === "already" ? "already" : "pending");
+  }
+  if (res.status === 400 || res.status === 422) return result("invalid-email");
+  if (res.status === 429) return result("busy");
+  return result("error");
 }
 
 const INPUT =
@@ -28,8 +29,8 @@ const INPUT =
 const BUTTON =
   "min-h-13 cursor-pointer rounded-2xl border-2 border-ink bg-accent px-6 py-3 font-extrabold text-on-accent shadow-hard disabled:cursor-wait";
 
-// Without JS the form still posts to /api/subscribe (Task 15 should accept a
-// form-encoded `email` as well as JSON).
+// With JS: fetch JSON {email}, show the result inline. Without JS the form
+// posts form-encoded `email` and /api/subscribe redirects to /subscribed.
 export function SubscribeBanner({ variant }: Props) {
   const id = useId();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -44,9 +45,9 @@ export function SubscribeBanner({ variant }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      setStatus(messageFor(res.status));
+      setStatus(await statusFor(res));
     } catch {
-      setStatus({ kind: "error", message: MESSAGES.failed });
+      setStatus(result("error"));
     }
   }
 

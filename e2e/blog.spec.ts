@@ -98,13 +98,39 @@ test.describe("blog index, seeded database", () => {
     await expect(last.getByRole("link", { name: "Or follow the RSS feed" })).toHaveAttribute("href", "/rss.xml");
   });
 
-  test("subscribing before /api/subscribe exists shows a friendly error", async ({ page }) => {
-    await page.route("**/api/subscribe", (route) => route.fulfill({ status: 404, body: "Not found" }));
+  test("subscribing from the banner shows the check-your-inbox state (dev mailer)", async ({ page }, testInfo) => {
+    await page.goto("/blog");
+    const banner = page.locator("main section").last();
+    await banner.getByLabel("Email address").fill(`reader-${testInfo.project.name}-${Date.now()}@example.com`);
+    await banner.getByRole("button", { name: "Subscribe" }).click();
+    await expect(banner.getByRole("status")).toHaveText("Almost there. Check your inbox for a confirmation link.");
+  });
+
+  test("the banner says so when the address is already subscribed", async ({ page }) => {
+    await page.route("**/api/subscribe", (route) => route.fulfill({ status: 200, json: { status: "already" } }));
     await page.goto("/blog");
     const banner = page.locator("main section").last();
     await banner.getByLabel("Email address").fill("reader@example.com");
     await banner.getByRole("button", { name: "Subscribe" }).click();
-    await expect(banner.getByRole("status")).toHaveText(/isn't open yet/);
+    await expect(banner.getByRole("status")).toHaveText(/already subscribed/);
+  });
+
+  test("without JS the form post redirects to /subscribed", async ({ request }, testInfo) => {
+    const res = await request.post("/api/subscribe", {
+      form: { email: `nojs-${testInfo.project.name}-${Date.now()}@example.com` },
+      maxRedirects: 0,
+    });
+    expect(res.status()).toBe(303);
+    expect(new URL(res.headers().location).pathname + new URL(res.headers().location).search).toBe(
+      "/subscribed?state=pending",
+    );
+  });
+
+  test("/subscribed shows the state from the query", async ({ page }) => {
+    await page.goto("/subscribed?state=unsubscribed");
+    await expect(page.getByRole("heading", { level: 1, name: "You're unsubscribed." })).toBeVisible();
+    await page.goto("/subscribed?state=bogus");
+    await expect(page.getByRole("heading", { level: 1, name: "Email updates" })).toBeVisible();
   });
 
   test("no horizontal scroll", async ({ page }) => {
