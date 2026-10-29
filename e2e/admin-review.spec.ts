@@ -6,8 +6,7 @@ import { sql } from "./support/db";
 // which knows exactly one address: "309 Clement St, San Francisco". Saving a
 // review changes /reviews (latest reviews, the food count), so this spec runs
 // in the "writes" project, after every other spec, and deletes what it creates
-// through the admin list so the public pages are expired back. The public
-// /reviews/food check belongs to Task 26, when that page exists.
+// through the admin list so the public pages are expired back.
 
 const reviewIdFromUrl = (page: Page) => /\/admin\/reviews\/([a-z0-9]+)/.exec(page.url())?.[1] ?? "";
 
@@ -98,6 +97,14 @@ test("create a food review: geocoded address, region from the city, dishes, save
     const row = page.getByRole("listitem").filter({ has: page.locator(`a[href="/admin/reviews/${id}"]`) });
     await expect(row).toContainText("Burma Superstar");
     await expect(row.getByRole("img", { name: "8 out of 10" })).toBeVisible();
+
+    // Public: /reviews/food is static, and the save expired it, so the next
+    // load lists the new place beside the seeded Burma Superstar.
+    await page.goto("/reviews/food");
+    const places = page.getByRole("list", { name: "Places" }).getByRole("listitem");
+    await expect(places).toHaveCount(9);
+    await expect(places.filter({ hasText: "Burma Superstar" })).toHaveCount(2);
+    await expect(page.getByTestId("food-map").getByRole("button", { name: "Burma Superstar, 8 out of 10" })).toHaveCount(2);
   } finally {
     await cleanUp(page, id);
   }
