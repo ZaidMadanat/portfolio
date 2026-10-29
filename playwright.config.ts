@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { SEEDED_URL } from "./e2e/support/servers";
 
 /** Specs that change what public pages show (see the "writes" project). */
-const WRITES = /admin-editor\.spec\.ts$/;
+const WRITES = /admin-(editor|review|favourites)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "./e2e",

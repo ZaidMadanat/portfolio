@@ -1,0 +1,139 @@
+{
+  "version": 8,
+  "name": "zaidmadanat light",
+  "metadata": {
+    "comment": "A small Apple-Maps-like light style over OpenFreeMap vector tiles (OpenMapTiles schema): blue water, soft land, green parks, white streets, yellow freeways. Shared by the admin pin picker (Task 24) and the food map (Task 26)."
+  },
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet"
+    }
+  },
+  "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#f4f1ea" } },
+    {
+      "id": "landcover-green",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["match", ["get", "class"], ["grass", "wood", "farmland"], true, false],
+      "paint": { "fill-color": "#d9ecc8", "fill-opacity": 0.8 }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "park",
+      "paint": { "fill-color": "#c6e6b3" }
+    },
+    {
+      "id": "landuse-park",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "filter": ["match", ["get", "class"], ["park", "cemetery", "pitch", "stadium"], true, false],
+      "paint": { "fill-color": "#c6e6b3" }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "paint": { "fill-color": "#9fd0f2" }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "waterway",
+      "paint": { "line-color": "#9fd0f2", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 3] }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "minzoom": 14,
+      "paint": { "fill-color": "#e6e0d4", "fill-outline-color": "#d8d0c0" }
+    },
+    {
+      "id": "road-casing",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["match", ["get", "class"], ["primary", "secondary", "tertiary", "trunk", "minor", "service"], true, false],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#ddd5c6",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 10, 1, 13, 3, 16, 12, 18, 30]
+      }
+    },
+    {
+      "id": "road",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["match", ["get", "class"], ["primary", "secondary", "tertiary", "trunk", "minor", "service"], true, false],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 10, 0.5, 13, 2, 16, 10, 18, 26]
+      }
+    },
+    {
+      "id": "freeway-casing",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["==", ["get", "class"], "motorway"],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#e3b33c",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 8, 1.5, 13, 5, 16, 16, 18, 34]
+      }
+    },
+    {
+      "id": "freeway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": ["==", ["get", "class"], "motorway"],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#ffd76a",
+        "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 8, 1, 13, 3.5, 16, 13, 18, 30]
+      }
+    },
+    {
+      "id": "street-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "transportation_name",
+      "minzoom": 13,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14]
+      },
+      "paint": { "text-color": "#5e574d", "text-halo-color": "#ffffff", "text-halo-width": 1.5 }
+    },
+    {
+      "id": "place-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "filter": ["match", ["get", "class"], ["city", "town", "village", "suburb", "neighbourhood", "quarter"], true, false],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": ["match", ["get", "class"], "city", 15, "town", 13, 11],
+        "text-transform": ["match", ["get", "class"], ["suburb", "neighbourhood", "quarter"], "uppercase", "none"],
+        "text-letter-spacing": ["match", ["get", "class"], ["suburb", "neighbourhood", "quarter"], 0.08, 0]
+      },
+      "paint": { "text-color": "#1c1a17", "text-halo-color": "#ffffff", "text-halo-width": 1.5 }
+    }
+  ]
+}

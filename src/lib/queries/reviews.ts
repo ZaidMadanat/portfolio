@@ -1,8 +1,11 @@
 import type { ReviewKind } from "@/generated/prisma/enums";
 import { cached, TAGS } from "@/lib/cache";
 import { db } from "@/lib/db";
-import { formatMonthDay, priceLabel, SITE_TIME_ZONE } from "@/lib/format";
+import { formatMonthDay, SITE_TIME_ZONE } from "@/lib/format";
 import { displayedFilmRating } from "@/lib/rating";
+import { foodMeta } from "@/lib/reviews/meta";
+
+export { foodMeta };
 
 export type FavoriteView = {
   position: number;
@@ -55,18 +58,6 @@ function monthStart(now: Date): Date {
     month: "2-digit",
   }).format(now);
   return new Date(`${ym}-01T00:00:00.000Z`);
-}
-
-/** "Mexican · $ · Mission, San Francisco"; missing parts are skipped. */
-export function foodMeta(r: {
-  cuisine: string | null;
-  price: number | null;
-  neighbourhood: string | null;
-  city: string | null;
-}): string {
-  return [r.cuisine, r.price ? priceLabel(r.price) : null, [r.neighbourhood, r.city].filter(Boolean).join(", ")]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 const opt = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;

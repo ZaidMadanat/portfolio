@@ -1,11 +1,14 @@
 "use server";
 
 import { z } from "zod";
+import { createDraft, slugTaken } from "@/lib/admin/posts";
+import { REVIEW_TEMPLATE_IDS } from "@/lib/admin/reviews";
 import { db } from "@/lib/db";
 import { geocode, type GeocodeResult } from "@/lib/geocode";
 import { requireAdmin } from "@/lib/require-admin";
 import { revalidateFor } from "@/lib/revalidate";
 import { type ParsedReview, type ReviewInput, reviewFieldErrors, reviewInput } from "@/lib/reviews/schema";
+import { slugify, uniqueSlug } from "@/lib/slug";
 
 // The review form's actions (spec §3 Geocoding, §7 Reviews, §7.3). Each checks
 // the admin session first. Public pages are expired with updateTag, so a save
@@ -197,4 +200,42 @@ export async function deleteReview(id: string): Promise<void> {
 export async function geocodeAction(input: string): Promise<GeocodeResult | null> {
   await requireAdmin();
   return geocode(address.parse(input));
+}
+
+export type StartReviewPostResult = { ok: true; postId: string } | { ok: false; message: string };
+
+/**
+ * "Write one now" (spec §7 Reviews): a draft post from the kind's built-in
+ * template, linked to the review and titled after it, for the editor to open.
+ * A review that already has a post gets that post back instead. Drafts aren't
+ * public, so nothing is revalidated; publishing the post does that.
+ */
+export async function startReviewPost(reviewId: string): Promise<StartReviewPostResult> {
+  await requireAdmin();
+  const checked = recordId.safeParse(reviewId);
+  const review = checked.success
+    ? await db.review.findUnique({ where: { id: checked.data }, select: { id: true, kind: true, title: true, post: { select: { id: true } } } })
+    : null;
+  if (!review) return { ok: false, message: MESSAGES.notFound };
+  if (review.post) return { ok: true, postId: review.post.id };
+
+  const draft = await createDraft(REVIEW_TEMPLATE_IDS[review.kind]);
+  try {
+    await db.post.update({ where: { id: draft.id }, data: { reviewId: review.id } });
+  } catch (err) {
+    // Linked a moment ago (a double click): drop this draft and open that post.
+    await db.post.delete({ where: { id: draft.id } });
+    if (prismaCode(err) !== "P2002") throw err;
+    const linked = await db.post.findUnique({ where: { reviewId: review.id }, select: { id: true } });
+    return linked ? { ok: true, postId: linked.id } : { ok: false, message: MESSAGES.race };
+  }
+  // Best effort: the editor would also derive the slug from the title on its first save.
+  const slug = await uniqueSlug(slugify(review.title) || "untitled", (s) => slugTaken(s, draft.id));
+  await db.post
+    .update({ where: { id: draft.id }, data: { title: review.title, slug } })
+    .catch((err: unknown) => {
+      if (prismaCode(err) !== "P2002") throw err;
+      return db.post.update({ where: { id: draft.id }, data: { title: review.title } });
+    });
+  return { ok: true, postId: draft.id };
 }

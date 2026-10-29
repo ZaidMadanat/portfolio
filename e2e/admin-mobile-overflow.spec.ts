@@ -43,6 +43,14 @@ test.describe("admin pages", () => {
     await expectNoSideScroll(page, `/admin/posts/${post.id}`, (p) => p.locator(".bn-editor"));
   });
 
+  test("reviews: the list, the new form on every tab, and a seeded review", async ({ page }) => {
+    await expectNoSideScroll(page, "/admin/reviews", h1("Reviews"));
+    for (const kind of ["FOOD", "FILM", "ALBUM", "CONCERT"]) {
+      await expectNoSideScroll(page, `/admin/reviews/new?kind=${kind}`, h1("New review"));
+    }
+    await expectNoSideScroll(page, "/admin/reviews/dev-fixture-food-burma-superstar", h1("Edit review"));
+  });
+
   test("subscribers, with rows in the table", async ({ page }) => {
     const id = e2eId();
     const email = `e2e-overflow-${id}@example.com`;
