@@ -1,9 +1,11 @@
 name: CI
 
+# main serves the live site; rebuild stays until it's merged into main.
 on:
   pull_request:
+    branches: [main, rebuild]
   push:
-    branches: [rebuild]
+    branches: [main, rebuild]
 
 permissions:
   contents: read
