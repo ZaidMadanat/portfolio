@@ -9,10 +9,11 @@ import type { FilmCard } from "@/lib/queries/films";
 // Poster tilts in degrees (spec §5 keeps them within ±0.5–2), as on the canvas.
 const TILTS = [-1.5, 1, -0.5, 1.5, -1, 0.5];
 
-// One card per log (spec §6.6): poster (or a coloured block with the title),
-// the rating stamp (none when unrated), title, year, stars and date. A REVIEW
-// tag marks a log with a linked review; when its post is published the title
-// link stretches over the whole card.
+// One card per log or manual film review (spec §6.6): poster (or a coloured
+// block with the title), the rating stamp (none when unrated), title, year,
+// stars and date. A REVIEW tag marks a log with a linked review, and every
+// manual review; when its post is published the title link stretches over the
+// whole card.
 export function FilmGrid({ cards }: { cards: FilmCard[] }) {
   return (
     <ul aria-label="Film logs" className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
@@ -57,8 +58,13 @@ function FilmItem({ card, index }: { card: FilmCard; index: number }) {
           </Link>
         ) : (
           card.title
-        )}{" "}
-        <span className="font-normal text-muted">{card.year}</span>
+        )}
+        {card.year != null ? (
+          <>
+            {" "}
+            <span className="font-normal text-muted">{card.year}</span>
+          </>
+        ) : null}
       </h3>
       <p className="text-sm text-muted">
         {stars ? (
