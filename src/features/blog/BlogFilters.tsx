@@ -38,8 +38,14 @@ function WithSearchParams({ posts }: Props) {
   // unlike router.replace, doesn't refetch the route for every keystroke.
   // Pass null: Next copies its own history state in, and skips the sync for
   // state that already carries its internal markers.
-  const onChange = (next: BlogQuery) =>
+  // Each change merges into the live URL, not `query`: useSearchParams catches
+  // up with replaceState a moment later, so a second quick change (a category
+  // chip, then a tag) would otherwise drop the first. null clears everything.
+  const onChange = (patch: Partial<BlogQuery> | null) => {
+    const current = parseBlogQuery(new URLSearchParams(window.location.search));
+    const next = patch === null ? {} : { ...current, ...patch };
     window.history.replaceState(null, "", `${window.location.pathname}${blogQueryString(next)}`);
+  };
   return <BlogIndex posts={posts} query={query} onChange={onChange} />;
 }
 
@@ -63,13 +69,13 @@ function BlogIndex({
   posts,
   query,
   onChange,
-}: Props & { query: BlogQuery; onChange?: (next: BlogQuery) => void }) {
+}: Props & { query: BlogQuery; onChange?: (patch: Partial<BlogQuery> | null) => void }) {
   // The search box keeps its own text so typing never fights the URL.
   const [text, setText] = useState(query.q ?? "");
-  const set = (patch: Partial<BlogQuery>) => onChange?.({ ...query, ...patch });
+  const set = (patch: Partial<BlogQuery>) => onChange?.(patch);
   const clear = () => {
     setText("");
-    onChange?.({});
+    onChange?.(null);
   };
 
   const years = useMemo(
