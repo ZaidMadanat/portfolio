@@ -75,9 +75,9 @@ describe("getPlaces", () => {
       });
     await post("linked-post", "c-1", "PUBLISHED");
     await post("draft-post", "c-2", "DRAFT");
-    for (const [id, order] of [["m2", 1], ["m1", 0]] as const) {
+    for (const [id, order, alt] of [["m2", 1, ""], ["m1", 0, "  A bowl of khao soi on a red table  "]] as const) {
       await db.media.create({
-        data: { id, blobUrl: `/uploads/media/${id}/2400.webp`, filename: `${id}.jpg`, width: 2400, height: 1600, bytes: 1 },
+        data: { id, blobUrl: `/uploads/media/${id}/2400.webp`, filename: `${id}.jpg`, width: 2400, height: 1600, bytes: 1, alt },
       });
       await db.reviewMedia.create({ data: { reviewId: "c-1", mediaId: id, order } });
     }
@@ -87,7 +87,11 @@ describe("getPlaces", () => {
       ["c-1", "linked-post"],
       ["c-2", null],
     ]);
-    expect(places[0].photos).toEqual(["/uploads/media/m1/960.webp", "/uploads/media/m2/960.webp"]);
+    // The library's alt text wins; an empty one falls back to a description of the place.
+    expect(places[0].photos).toEqual([
+      { url: "/uploads/media/m1/960.webp", alt: "A bowl of khao soi on a red table" },
+      { url: "/uploads/media/m2/960.webp", alt: "Photo 2 at Linked" },
+    ]);
   });
 
   it("is empty with no food reviews", async () => {

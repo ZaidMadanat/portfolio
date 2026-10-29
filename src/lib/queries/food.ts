@@ -2,6 +2,7 @@ import { cached, TAGS } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { mediaUrl } from "@/lib/media/urls";
 import type { Region } from "@/lib/regions";
+import { reviewPhotoAlt, type ReviewPhoto } from "@/lib/reviews/photos";
 
 // The /reviews/food data (spec §6.5): every FOOD review with a map position.
 
@@ -19,8 +20,8 @@ export type Place = {
   /** The visit day, "YYYY-MM-DD" (Review.date is UTC midnight). */
   date: string;
   dishes: { name: string; mustOrder: boolean }[];
-  /** Photo URLs in review order, sized for the place card. */
-  photos: string[];
+  /** Photos in review order, sized for the place card, with the library's alt text. */
+  photos: ReviewPhoto[];
   /** The linked post's slug, only when that post is published. */
   postSlug: string | null;
 };
@@ -47,7 +48,7 @@ const loadPlaces = cached(
       orderBy: [{ date: "desc" }, { id: "asc" }],
       include: {
         dishes: { orderBy: [{ order: "asc" }, { id: "asc" }], select: { name: true, mustOrder: true } },
-        photos: { orderBy: [{ order: "asc" }, { mediaId: "asc" }], select: { media: { select: { blobUrl: true, width: true } } } },
+        photos: { orderBy: [{ order: "asc" }, { mediaId: "asc" }], select: { media: { select: { blobUrl: true, width: true, alt: true } } } },
         post: { select: { slug: true, status: true } },
       },
     });
@@ -64,7 +65,7 @@ const loadPlaces = cached(
       lng: r.lng as number,
       date: r.date.toISOString().slice(0, 10),
       dishes: r.dishes,
-      photos: r.photos.map((p) => photoUrl(p.media)),
+      photos: r.photos.map((p, i) => ({ url: photoUrl(p.media), alt: reviewPhotoAlt(p.media.alt, r.title, i) })),
       postSlug: r.post?.status === "PUBLISHED" ? r.post.slug : null,
     }));
   },

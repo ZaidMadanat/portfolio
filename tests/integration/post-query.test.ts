@@ -119,6 +119,35 @@ describe("getPostBySlug", () => {
     });
   });
 
+  it("gives a photo in the rating box the library's alt text, else a description of the place", async () => {
+    const photo = async (reviewId: string, id: string, alt: string) => {
+      await db.media.create({
+        data: { id, blobUrl: `/uploads/media/${id}/2400.webp`, filename: "IMG_0001.jpg", width: 2400, height: 1600, bytes: 1, alt },
+      });
+      await db.reviewMedia.create({ data: { reviewId, mediaId: id, order: 0 } });
+    };
+    const withAlt = await db.review.create({
+      data: { kind: "FOOD", title: "La Taqueria", rating: 9, date: new Date("2026-03-14"), city: "San Francisco" },
+    });
+    await photo(withAlt.id, "m-alt", "A carnitas burrito cut in half");
+    await publish("burritos", { reviewId: withAlt.id, category: "FOOD" });
+    const noAlt = await db.review.create({
+      data: { kind: "FOOD", title: "Comal", rating: 8, date: new Date("2026-03-01"), city: "Berkeley" },
+    });
+    await photo(noAlt.id, "m-blank", "");
+    await publish("comal", { reviewId: noAlt.id, category: "FOOD" });
+
+    const box = async (slug: string) => {
+      const r = await getPostBySlug(slug);
+      return r && "post" in r ? r.post.review : undefined;
+    };
+    expect(await box("burritos")).toMatchObject({
+      imageUrl: "/uploads/media/m-alt/2400.webp",
+      imageAlt: "A carnitas burrito cut in half",
+    });
+    expect(await box("comal")).toMatchObject({ imageUrl: "/uploads/media/m-blank/2400.webp", imageAlt: "Photo at Comal" });
+  });
+
   it("drops the rating box, without throwing, once the linked review is deleted (Review Focus 5)", async () => {
     const review = await db.review.create({
       data: { kind: "FOOD", title: "La Taqueria", rating: 9, date: new Date("2026-03-14"), cuisine: "Mexican", price: 1, neighbourhood: "Mission", city: "San Francisco" },

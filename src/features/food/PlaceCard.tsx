@@ -20,7 +20,7 @@ export function PlaceCard({ place, ref }: Props) {
       aria-labelledby={titleId}
       className="flex scroll-mt-6 flex-col overflow-hidden rounded-3xl border-2 border-ink bg-surface text-ink shadow-hard"
     >
-      {place.photos.length ? <Photos name={place.name} photos={place.photos} /> : null}
+      {place.photos.length ? <Photos photos={place.photos} /> : null}
       <div className="flex flex-col gap-5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -71,18 +71,18 @@ export function PlaceCard({ place, ref }: Props) {
   );
 }
 
-function Photos({ name, photos }: { name: string; photos: string[] }) {
+function Photos({ photos }: { photos: Place["photos"] }) {
   const [first, ...rest] = photos;
   return (
     <div className="flex flex-col gap-2 border-b-2 border-ink bg-soft p-2">
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-        <Image src={first} alt={`At ${name}`} fill unoptimized sizes="(min-width: 1024px) 26rem, 100vw" className="object-cover" />
+        <Image src={first.url} alt={first.alt} fill unoptimized sizes="(min-width: 1024px) 26rem, 100vw" className="object-cover" />
       </div>
       {rest.length ? (
         <ul aria-label="More photos" className="relative flex gap-2 overflow-x-auto">
-          {rest.map((src, i) => (
-            <li key={src} className="relative size-20 shrink-0 overflow-hidden rounded-xl">
-              <Image src={src} alt={`At ${name}, photo ${i + 2}`} fill unoptimized sizes="5rem" className="object-cover" />
+          {rest.map((p) => (
+            <li key={p.url} className="relative size-20 shrink-0 overflow-hidden rounded-xl">
+              <Image src={p.url} alt={p.alt} fill unoptimized sizes="5rem" className="object-cover" />
             </li>
           ))}
         </ul>

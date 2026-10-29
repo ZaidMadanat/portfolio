@@ -31,7 +31,7 @@ function Artwork({ review }: { review: RatingBoxData }) {
   if (!review.imageUrl) return null;
   return (
     <span className="relative size-24 shrink-0 overflow-hidden rounded-2xl border-3 border-ink bg-soft [grid-area:art]">
-      <Image src={review.imageUrl} alt="" fill unoptimized sizes="96px" className="object-cover" />
+      <Image src={review.imageUrl} alt={review.imageAlt ?? ""} fill unoptimized sizes="96px" className="object-cover" />
     </span>
   );
 }

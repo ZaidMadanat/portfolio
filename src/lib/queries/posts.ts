@@ -3,6 +3,7 @@ import { cached, TAGS } from "@/lib/cache";
 import { type BlogCategory, categoryLabel } from "@/lib/categories";
 import { db } from "@/lib/db";
 import { formatDate, SITE_TIME_ZONE } from "@/lib/format";
+import { reviewPhotoAlt } from "@/lib/reviews/photos";
 import { foodMeta, KIND_PAGE } from "./reviews";
 
 export type PostSummary = {
@@ -98,6 +99,8 @@ export type RatingBoxData = {
   meta: string;
   rating: number;
   imageUrl?: string;
+  /** Set when the image is a review photo: the library's alt text, else a description. */
+  imageAlt?: string;
   /** The review's page. */
   href: string;
 };
@@ -120,7 +123,7 @@ const reviewSelect = {
   coverUrl: true,
   venue: true,
   filmLog: { select: { year: true, watchedAt: true, posterUrl: true } },
-  photos: { orderBy: { order: "asc" }, take: 1, select: { media: { select: { blobUrl: true } } } },
+  photos: { orderBy: { order: "asc" }, take: 1, select: { media: { select: { blobUrl: true, alt: true } } } },
 } as const;
 
 type ReviewRow = {
@@ -137,11 +140,12 @@ type ReviewRow = {
   coverUrl: string | null;
   venue: string | null;
   filmLog: { year: number; watchedAt: Date; posterUrl: string | null } | null;
-  photos: { media: { blobUrl: string } }[];
+  photos: { media: { blobUrl: string; alt: string } }[];
 };
 
 function toRatingBox(r: ReviewRow): RatingBoxData {
-  const photo = r.photos[0]?.media.blobUrl;
+  const media = r.photos[0]?.media;
+  const photo = media?.blobUrl;
   let title = r.title;
   let meta: string;
   let image: string | null | undefined;
@@ -166,12 +170,16 @@ function toRatingBox(r: ReviewRow): RatingBoxData {
       image = photo || r.coverUrl;
       break;
   }
+  // Film posters and album covers render decoratively beside the title; a photo
+  // is content, so it carries the library's alt text.
+  const isPhoto = Boolean(image) && image === photo;
   return {
     kind: r.kind,
     title,
     meta,
     rating: r.rating,
     ...(image ? { imageUrl: image } : {}),
+    ...(isPhoto ? { imageAlt: reviewPhotoAlt(media?.alt, r.kind === "CONCERT" ? r.venue || r.title : r.title) } : {}),
     href: KIND_PAGE[r.kind],
   };
 }
