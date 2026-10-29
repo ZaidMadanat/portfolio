@@ -1,0 +1,155 @@
+/* The post editor's look (admin only). Loaded with the client-only editor
+   chunk, never on public pages. BlockNote's theme variables are mapped onto
+   the Citrus Pop tokens, which already switch with the .dark class. */
+
+:root .bn-root,
+:root .bn-root[data-color-scheme] {
+  --bn-colors-editor-text: var(--color-ink);
+  --bn-colors-editor-background: var(--color-bg);
+  --bn-colors-menu-text: var(--color-ink);
+  --bn-colors-menu-background: var(--color-surface);
+  --bn-colors-tooltip-text: var(--color-bg);
+  --bn-colors-tooltip-background: var(--color-ink);
+  --bn-colors-hovered-text: var(--color-ink);
+  --bn-colors-hovered-background: var(--color-soft);
+  --bn-colors-selected-text: var(--color-bg);
+  --bn-colors-selected-background: var(--color-ink);
+  --bn-colors-disabled-text: var(--color-muted);
+  --bn-colors-disabled-background: var(--color-line);
+  --bn-colors-shadow: var(--color-ink);
+  --bn-colors-border: var(--color-line);
+  --bn-colors-side-menu: var(--color-muted);
+  --bn-font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --bn-border-radius: 12px;
+}
+
+/* Floating menus: ink border and a hard offset shadow, as in the canvas. */
+:root .bn-mantine .bn-suggestion-menu,
+:root .bn-mantine .bn-toolbar,
+:root .bn-mantine .bn-menu-dropdown,
+:root .bn-mantine .bn-panel {
+  border: 2px solid var(--color-ink);
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 var(--color-ink);
+}
+
+/* Slash menu icons: outlined glyphs, as in the canvas. */
+:root .bn-mantine .bn-mt-suggestion-menu-item-section[data-position="left"] {
+  padding: 0;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.post-slash-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* The writing surface. The left padding leaves room for BlockNote's
+   drag handle and "+" button. */
+.post-editor .bn-editor {
+  padding-inline: 48px 0;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.post-editor .bn-editor [data-content-type="heading"] {
+  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.post-editor .bn-editor [data-content-type="quote"] blockquote {
+  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  color: var(--color-accent-ink);
+}
+
+/* Math: live KaTeX preview above an editable LaTeX field. */
+.post-math {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.post-math .math {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.post-math-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 15px;
+}
+
+.post-math-label {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.post-math-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+}
+
+.post-math-input:focus {
+  border-color: var(--color-ink);
+}
+
+/* Callouts: the same colours as the public post. */
+.post-editor .callout {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 18px;
+  border: 2px solid var(--color-ink);
+  border-radius: 20px;
+}
+
+.post-editor .callout-tip {
+  background: var(--color-soft2);
+}
+
+.post-editor .callout-warning {
+  background: var(--color-soft);
+}
+
+.post-editor .callout > p {
+  width: 100%;
+  margin: 0;
+}
+
+.callout-variant {
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 2px solid var(--color-ink);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

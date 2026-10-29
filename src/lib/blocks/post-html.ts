@@ -17,6 +17,7 @@ export async function renderPostBlocks(blocks: unknown[]): Promise<{ html: strin
       ? []
       : await db.media.findMany({ where: { id: { in: ids } }, select: { id: true, alt: true } });
   const alts = new Map(media.map((m) => [m.id, m.alt]));
-  const html = await renderPostHtml(withMediaAlt(blocks, alts));
+  // BlockNote fills default props into the blocks it renders: give it a copy.
+  const html = await renderPostHtml(withMediaAlt(structuredClone(blocks), alts));
   return { html, mediaIds: ids.filter((id) => alts.has(id)) };
 }
