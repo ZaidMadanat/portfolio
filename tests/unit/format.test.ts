@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDate,
   formatDuration,
   formatMiles,
   formatMonthDay,
@@ -15,6 +16,12 @@ describe("format", () => {
     expect(formatMonthDay("2026-04-26T00:00:00.000Z")).toBe("Apr 26");
     // 03:00 UTC is still the previous evening in Berkeley.
     expect(formatMonthDay("2026-10-24T03:00:00.000Z", SITE_TIME_ZONE)).toBe("Oct 23");
+  });
+
+  it("formats full dates with the same time-zone rule", () => {
+    expect(formatDate("2026-04-27T19:00:00.000Z", SITE_TIME_ZONE)).toBe("Apr 27, 2026");
+    expect(formatDate("2026-01-01T03:00:00.000Z", SITE_TIME_ZONE)).toBe("Dec 31, 2025");
+    expect(formatDate(new Date("2026-04-26T00:00:00.000Z"))).toBe("Apr 26, 2026");
   });
 
   it("formats durations, distances, sports, prices and plurals", () => {

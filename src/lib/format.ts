@@ -13,6 +13,16 @@ export function formatMonthDay(date: Date | string, timeZone = "UTC"): string {
   );
 }
 
+/** "Apr 27, 2026". Same time-zone rule as formatMonthDay. */
+export function formatDate(date: Date | string, timeZone = "UTC"): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone,
+  }).format(new Date(date));
+}
+
 /** "50 min", "1 h 5 min". */
 export function formatDuration(seconds: number): string {
   const mins = Math.max(0, Math.round(seconds / 60));
