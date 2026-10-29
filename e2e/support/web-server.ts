@@ -20,6 +20,9 @@ const EMPTY_DIST = ".next-e2e-empty";
 process.env.E2E_AUTH = "1";
 // A known value, so admin-dashboard.spec.ts can check it never reaches a page.
 process.env.CRON_SECRET = E2E_CRON_SECRET;
+// e2e never calls the real Nominatim: geocode answers "309 Clement St, San
+// Francisco" with fixed coordinates and everything else with null (src/lib/geocode.ts).
+process.env.GEOCODE_FAKE = "1";
 
 // Each build keys its unstable_cache entries by its own CACHE_BUILD_KEY
 // (next.config.ts), so the empty build's entries can't leak into the seeded one.
