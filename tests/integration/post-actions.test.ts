@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { resetDb } from "./reset";
 
@@ -20,11 +20,16 @@ vi.mock("@/lib/require-admin", async (importOriginal) => {
 });
 vi.mock("next/cache", () => ({ ...cache, unstable_cache: <T>(fn: T) => fn }));
 
-const { publishPost, savePost, saveAsTemplate, unpublishPost } = await import("@/app/admin/posts/actions");
+const { deletePost, publishPost, savePost, saveAsTemplate, unpublishPost } = await import("@/app/admin/posts/actions");
 const { createDraft } = await import("@/lib/admin/posts");
+const { mediaUsage } = await import("@/lib/admin/media-library");
+const { getLikes, getViews, likePost, recordView } = await import("@/lib/counters");
+const { getStore, resetMemoryStore } = await import("@/lib/redis");
 
 beforeEach(async () => {
   await resetDb();
+  vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+  resetMemoryStore();
   admin.signedIn = true;
   cache.updateTag.mockClear();
   cache.revalidateTag.mockClear();
@@ -51,6 +56,10 @@ async function published(slug: string) {
     data: { slug, title: "Old title", blocks: [], category: "NOTES", status: "PUBLISHED", publishedAt: new Date("2026-10-01T12:00:00Z") },
   });
 }
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const tagsOf = async (postId: string) =>
   (await db.postTag.findMany({ where: { postId }, select: { tag: { select: { name: true } } } })).map((t) => t.tag.name).sort();
@@ -225,5 +234,83 @@ describe("templates", () => {
       category: "STATISTICS",
       blocks: [paragraph("Every test starts the same way.")],
     });
+  });
+});
+
+describe("deletePost", () => {
+  const photo = (id: string) =>
+    db.media.create({ data: { id, blobUrl: `/uploads/media/${id}/2400.webp`, filename: `${id}.jpg`, width: 2400, height: 1600, bytes: 1, alt: `Alt ${id}` } });
+
+  /** A published post with everything that hangs off it: review, photos, tags, an old slug, an email, counters. */
+  async function fullPost() {
+    await photo("m1");
+    await photo("cover");
+    const review = await db.review.create({ data: { kind: "FILM", title: "Ben-Hur", rating: 8, date: new Date("2026-10-01") } });
+    const post = await published("old-slug");
+    await savePost(post.id, input({ title: "Ben-Hur", slug: "ben-hur", reviewId: review.id, coverMediaId: "cover", tags: ["film"], blocks: [image("m1")] }));
+    const reader = await db.subscriber.create({ data: { email: "r@example.com", status: "CONFIRMED", confirmToken: "c", unsubscribeToken: "u" } });
+    await db.emailSend.create({ data: { postId: post.id, subscriberId: reader.id, status: "SENT", sentAt: new Date() } });
+    await db.postStat.create({ data: { postId: post.id, views: 3, likes: 1, syncedAt: new Date() } });
+    await db.postStatDaily.create({ data: { postId: post.id, day: new Date("2026-10-28"), views: 3, likes: 1 } });
+    const store = getStore();
+    await recordView(store, post.id);
+    await likePost(store, post.id, "vid-1", "s");
+    cache.updateTag.mockClear();
+    return { post, review, reader };
+  }
+
+  it("deletes the post and its rows, keeps the review (unlinked), the photos and the subscriber", async () => {
+    const { post, review, reader } = await fullPost();
+    const other = await published("other");
+    expect(await db.redirect.count({ where: { postId: post.id } })).toBe(1);
+
+    await deletePost(post.id);
+
+    expect(await db.post.findUnique({ where: { id: post.id } })).toBeNull();
+    for (const count of [
+      db.postMedia.count({ where: { postId: post.id } }),
+      db.redirect.count({ where: { postId: post.id } }),
+      db.emailSend.count({ where: { postId: post.id } }),
+      db.postStat.count({ where: { postId: post.id } }),
+      db.postStatDaily.count({ where: { postId: post.id } }),
+      db.postTag.count({ where: { postId: post.id } }),
+    ]) {
+      expect(await count).toBe(0);
+    }
+    // The review stays, now without a post; the photos stay and show as unused.
+    expect(await db.review.findUniqueOrThrow({ where: { id: review.id }, select: { post: { select: { id: true } } } })).toEqual({ post: null });
+    expect(await mediaUsage("m1")).toEqual([]);
+    expect(await mediaUsage("cover")).toEqual([]);
+    expect(await db.subscriber.findUnique({ where: { id: reader.id } })).not.toBeNull();
+    expect(await db.post.findUnique({ where: { id: other.id } })).not.toBeNull();
+    // Its counters are gone too.
+    const store = getStore();
+    expect(await getViews(store, post.id)).toBe(0);
+    expect(await getLikes(store, post.id, "vid-1", "s")).toEqual({ count: 0, liked: false });
+  });
+
+  it("expires the post's tags at once, plus the reviews hub when it was linked to a review", async () => {
+    const { post, review } = await fullPost();
+    await deletePost(post.id);
+    expect(cache.updateTag.mock.calls.map((c) => c[0])).toEqual(["posts", `post:${post.id}`, "rss", "home", "reviews", `review:${review.id}`, "home"]);
+    expect(cache.revalidateTag).not.toHaveBeenCalled();
+
+    cache.updateTag.mockClear();
+    const plain = await draft("plain");
+    await deletePost(plain.id);
+    expect(cache.updateTag.mock.calls).toEqual([["posts"], [`post:${plain.id}`], ["rss"], ["home"]]);
+  });
+
+  it("does nothing for an unknown id", async () => {
+    await expect(deletePost("nope")).resolves.toBeUndefined();
+    expect(cache.updateTag).not.toHaveBeenCalled();
+  });
+
+  it("refuses without an admin session and deletes nothing", async () => {
+    const post = await published("kept");
+    admin.signedIn = false;
+    await expect(deletePost(post.id)).rejects.toThrow();
+    expect(await db.post.findUnique({ where: { id: post.id } })).not.toBeNull();
+    expect(cache.updateTag).not.toHaveBeenCalled();
   });
 });

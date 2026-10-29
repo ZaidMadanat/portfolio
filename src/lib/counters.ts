@@ -1,7 +1,8 @@
 import type { CounterStore } from "./redis";
 
 // Views and add-only likes (spec §9.2–9.3). There is deliberately no unlike:
-// nothing here removes a member from a likes set.
+// nothing here removes a member from a likes set. Only deleting the post
+// itself drops its counters (clearCounters).
 
 const viewsKey = (postId: string) => `views:${postId}`;
 const likesKey = (postId: string) => `likes:${postId}`;
@@ -27,6 +28,11 @@ export function recordView(store: CounterStore, postId: string): Promise<number>
 
 export function getViews(store: CounterStore, postId: string): Promise<number> {
   return store.get(viewsKey(postId));
+}
+
+/** Drops a deleted post's views and likes keys, so its id leaves nothing behind. */
+export async function clearCounters(store: CounterStore, postId: string): Promise<void> {
+  await store.del(viewsKey(postId), likesKey(postId));
 }
 
 /** How many visitors liked the post (no visitor check; for housekeeping). */

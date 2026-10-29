@@ -7,9 +7,11 @@ import { excerptFrom, normalizeTags } from "@/lib/admin/post-fields";
 import { slugTaken, UNTITLED_SLUG } from "@/lib/admin/posts";
 import { renderPostBlocks } from "@/lib/blocks/post-html";
 import { plainText } from "@/lib/blocks/render";
+import { clearCounters } from "@/lib/counters";
 import { db } from "@/lib/db";
 import { enqueuePostNotification } from "@/lib/email/queue";
 import { readingMinutes } from "@/lib/reading-time";
+import { getStore } from "@/lib/redis";
 import { requireAdmin } from "@/lib/require-admin";
 import { revalidateFor } from "@/lib/revalidate";
 import { slugify, uniqueSlug } from "@/lib/slug";
@@ -156,6 +158,39 @@ export async function unpublishPost(postId: string): Promise<void> {
   const pid = id.parse(postId);
   const post = await db.post.update({ where: { id: pid }, data: { status: "DRAFT" }, select: { reviewId: true } });
   revalidatePost(pid, [post.reviewId]);
+}
+
+/**
+ * Deletes a post for good. One transaction unlinks its review (the review
+ * stays, without a post), removes its PostMedia, Redirect, EmailSend,
+ * PostStat and PostStatDaily rows, then the post. Its photos stay in the
+ * library, now unused. The public pages expire at once: /blog/<slug> and its
+ * old slugs 404, and it leaves /blog and /rss.xml. An unknown id does nothing.
+ */
+export async function deletePost(postId: string): Promise<void> {
+  await requireAdmin();
+  const pid = id.parse(postId);
+  const found = await db.$transaction(async (tx) => {
+    const post = await tx.post.findUnique({ where: { id: pid }, select: { reviewId: true } });
+    if (!post) return null;
+    if (post.reviewId) await tx.post.update({ where: { id: pid }, data: { reviewId: null } });
+    await tx.postMedia.deleteMany({ where: { postId: pid } });
+    await tx.redirect.deleteMany({ where: { postId: pid } });
+    await tx.emailSend.deleteMany({ where: { postId: pid } });
+    await tx.postStat.deleteMany({ where: { postId: pid } });
+    await tx.postStatDaily.deleteMany({ where: { postId: pid } });
+    // PostTag rows go with the post (onDelete: Cascade); the tags themselves stay.
+    await tx.post.delete({ where: { id: pid } });
+    return post;
+  });
+  if (!found) return;
+  revalidatePost(pid, [found.reviewId]);
+  try {
+    await clearCounters(getStore(), pid);
+  } catch (err) {
+    // The post is already gone; stale counter keys are harmless, so don't fail the delete.
+    console.warn("[admin] deletePost: couldn't clear the counters", err instanceof Error ? err.message : err);
+  }
 }
 
 const templateName = z.string().trim().min(1).max(80);

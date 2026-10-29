@@ -88,3 +88,50 @@ test("the editor's preview shows a draft as it will look", async ({ page, contex
   await expect(preview.getByRole("heading", { level: 1, name: "A preview check" })).toBeVisible();
   await expect(preview.locator(".prose")).toContainText("The question");
 });
+
+// Deleting a post (writes project): published, renamed so it has an old slug
+// that 308s, then deleted from the editor. Its page and old slug 404, and it's
+// gone from /blog and /rss.xml on the next load.
+test("delete a published post and it's gone from the public site", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin/posts/new");
+  await expect(page).toHaveURL(/\/admin\/posts\/[a-z0-9]+$/);
+  const editorUrl = page.url();
+
+  const stamp = Date.now();
+  const title = `E2E delete me ${stamp}`;
+  const oldSlug = `e2e-delete-me-${stamp}`;
+  const newSlug = `e2e-deleted-${stamp}`;
+  await page.getByLabel("Title", { exact: true }).fill(title);
+  await expect(page.getByTestId("save-status")).toHaveText("Saved · just now", { timeout: 10_000 });
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByTestId("post-status")).toHaveText("Published");
+
+  // Renaming a published post keeps the old URL as a redirect.
+  const settings = page.getByRole("complementary", { name: "Post settings" });
+  await settings.getByLabel("URL").fill(newSlug);
+  await expect(page.getByTestId("save-status")).toHaveText("Saved · just now", { timeout: 10_000 });
+  await expect(page.getByRole("link", { name: "View post" })).toHaveAttribute("href", `/blog/${newSlug}`);
+  const redirect = await page.request.get(`/blog/${oldSlug}`, { maxRedirects: 0 });
+  expect(redirect.status()).toBe(308);
+  await page.goto("/blog");
+  await expect(page.getByRole("link", { name: title })).toBeVisible();
+  expect(await (await page.request.get("/rss.xml")).text()).toContain(title);
+
+  await page.goto(editorUrl);
+  const danger = page.getByRole("region", { name: "Delete this post" });
+  await danger.getByRole("button", { name: "Delete post" }).click();
+  await expect(danger.getByText("Delete this post? This can't be undone.")).toBeVisible();
+  await danger.getByRole("button", { name: "Yes, delete it" }).click();
+  await expect(page).toHaveURL(/\/admin\/posts$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Posts" })).toBeVisible();
+  await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+
+  for (const slug of [newSlug, oldSlug]) {
+    expect((await page.request.get(`/blog/${slug}`, { maxRedirects: 0 })).status()).toBe(404);
+  }
+  await page.goto("/blog");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+  expect(await (await page.request.get("/rss.xml")).text()).not.toContain(title);
+});

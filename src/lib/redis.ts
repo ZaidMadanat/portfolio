@@ -10,6 +10,8 @@ export type CounterStore = {
   sadd(key: string, member: string): Promise<number>;
   scard(key: string): Promise<number>;
   sismember(key: string, member: string): Promise<boolean>;
+  /** Removes whole keys (a deleted post's counters). */
+  del(...keys: string[]): Promise<number>;
 };
 
 export function redisStore(redis: Redis = Redis.fromEnv()): CounterStore {
@@ -19,6 +21,7 @@ export function redisStore(redis: Redis = Redis.fromEnv()): CounterStore {
     sadd: (key, member) => redis.sadd(key, member),
     scard: (key) => redis.scard(key),
     sismember: async (key, member) => (await redis.sismember(key, member)) === 1,
+    del: (...keys) => redis.del(...keys),
   };
 }
 
@@ -46,6 +49,11 @@ export function memoryStore(): CounterStore {
     },
     scard: async (key) => sets.get(key)?.size ?? 0,
     sismember: async (key, member) => sets.get(key)?.has(member) ?? false,
+    del: async (...keys) => {
+      let n = 0;
+      for (const key of keys) n += Number(nums.delete(key)) + Number(sets.delete(key));
+      return n;
+    },
   };
 }
 

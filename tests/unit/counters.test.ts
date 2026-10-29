@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as counters from "@/lib/counters";
 import {
+  clearCounters,
   getLikes,
   getViews,
   likePost,
@@ -64,6 +65,21 @@ describe("views", () => {
 
   it("is 0 for an unseen post", async () => {
     expect(await getViews(memoryStore(), "nope")).toBe(0);
+  });
+});
+
+describe("clearCounters (deleting a post)", () => {
+  it("drops that post's views and likes, and no other post's", async () => {
+    const store = memoryStore();
+    await recordView(store, "p1");
+    await likePost(store, "p1", "vid-a", SECRET);
+    await recordView(store, "p2");
+    await likePost(store, "p2", "vid-a", SECRET);
+    await clearCounters(store, "p1");
+    expect(await getViews(store, "p1")).toBe(0);
+    expect(await getLikes(store, "p1", "vid-a", SECRET)).toEqual({ count: 0, liked: false });
+    expect(await getViews(store, "p2")).toBe(1);
+    expect(await getLikes(store, "p2", "vid-a", SECRET)).toEqual({ count: 1, liked: true });
   });
 });
 
