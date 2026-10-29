@@ -148,6 +148,8 @@ model Template {
   id        String    @id @default(cuid())
   name      String
   builtIn   Boolean   @default(false)
+  /// Built-ins are 1–7 in spec order (set by the seed); saved templates keep 1000.
+  sortOrder Int       @default(1000)
   category  Category?
   blocks    Json
   createdAt DateTime  @default(now())

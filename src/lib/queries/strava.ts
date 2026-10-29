@@ -18,7 +18,7 @@ const loadRecent = cached(
   async () => {
     const rows = await db.stravaActivity.findMany({
       where: { startAt: { gte: new Date(Date.now() - WINDOW_MS) } },
-      orderBy: { startAt: "desc" },
+      orderBy: [{ startAt: "desc" }, { id: "desc" }],
     });
     return rows.map((a) => ({ ...a, startAt: a.startAt.toISOString() }));
   },

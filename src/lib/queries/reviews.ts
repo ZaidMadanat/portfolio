@@ -86,7 +86,7 @@ const loadHub = cached(
         },
       }),
       db.review.findMany({
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         take: LATEST_COUNT,
         include: { filmLog: { select: { watchedAt: true } }, post: postSelect },
       }),

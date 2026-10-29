@@ -37,13 +37,13 @@ const loadLately = cached(
   async () => {
     const [log, album, post] = await Promise.all([
       db.filmLog.findFirst({
-        orderBy: [{ watchedAt: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ watchedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         include: { review: { select: { kind: true, rating: true } } },
       }),
-      db.albumListen.findFirst({ orderBy: { rank: "asc" } }),
+      db.albumListen.findFirst({ orderBy: [{ rank: "asc" }, { id: "asc" }] }),
       db.post.findFirst({
         where: { status: "PUBLISHED", publishedAt: { not: null } },
-        orderBy: { publishedAt: "desc" },
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         select: { slug: true, title: true, category: true, publishedAt: true, readingMinutes: true },
       }),
     ]);

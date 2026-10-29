@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
+import { seed } from "../../prisma/seed";
 import { resetDb } from "./reset";
 
 // The posts list, templates and subscribers admin (spec §7) against the test
@@ -18,7 +19,7 @@ vi.mock("@/lib/require-admin", async (importOriginal) => {
   };
 });
 
-const { listAdminPosts, parsePostFilter } = await import("@/lib/admin/posts");
+const { listAdminPosts, parsePostFilter, getPostForEditor } = await import("@/lib/admin/posts");
 const { listTemplates } = await import("@/lib/admin/templates");
 const { removeSubscriber } = await import("@/app/admin/subscribers/actions");
 const { deleteTemplate } = await import("@/app/admin/templates/actions");
@@ -70,6 +71,35 @@ describe("templates", () => {
       ["Notes / cheat sheet", true, ["Summary"]],
       ["Mine", false, ["Only"]],
     ]);
+  });
+
+  it("keeps the built-ins in spec order when the seed gives them the same createdAt", async () => {
+    const SPEC_ORDER = [
+      "Essay",
+      "Notes / cheat sheet",
+      "Project write-up",
+      "Restaurant review",
+      "Film review",
+      "Album review",
+      "Concert review",
+    ];
+    const tie = new Date("2026-10-29T10:47:09.585Z");
+    await seed(db, { fixtures: false });
+    await db.template.updateMany({ data: { createdAt: tie } });
+    // Saved templates come after every built-in: oldest first, then by name, then by id.
+    await db.template.create({ data: { id: "t-b", name: "Aaa mine", blocks: [], createdAt: tie } });
+    await db.template.create({ data: { id: "t-a", name: "Aaa mine", blocks: [], createdAt: tie } });
+    await db.template.create({ data: { id: "t-0", name: "Zzz older", blocks: [], createdAt: new Date("2026-01-01") } });
+    const expected = [...SPEC_ORDER, "Zzz older", "Aaa mine", "Aaa mine"];
+
+    const list = await listTemplates();
+    expect(list.map((t) => t.name)).toEqual(expected);
+    expect(list.slice(-2).map((t) => t.id)).toEqual(["t-a", "t-b"]);
+
+    // The editor's Template select uses the same order.
+    const p = await db.post.create({ data: { slug: "p", title: "p", blocks: [], category: "NOTES" } });
+    const editor = await getPostForEditor(p.id);
+    expect(editor?.templates.map((t) => t.name)).toEqual(expected);
   });
 
   it("deletes a saved template; posts started from it keep their content", async () => {

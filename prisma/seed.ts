@@ -84,8 +84,9 @@ export const BUILT_IN_TEMPLATES: { id: string; name: string; category: Category;
 ];
 
 async function seedTemplates(db: PrismaClient) {
-  for (const t of BUILT_IN_TEMPLATES) {
-    const data = { name: t.name, builtIn: true, category: t.category, blocks: asJson(t.blocks) };
+  // sortOrder pins the spec order: upserts in a tight loop can share a createdAt.
+  for (const [i, t] of BUILT_IN_TEMPLATES.entries()) {
+    const data = { name: t.name, builtIn: true, sortOrder: i + 1, category: t.category, blocks: asJson(t.blocks) };
     await db.template.upsert({ where: { id: t.id }, create: { id: t.id, ...data }, update: data });
   }
 }

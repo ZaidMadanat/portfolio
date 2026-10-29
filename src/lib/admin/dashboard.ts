@@ -58,13 +58,13 @@ export async function getDashboard(): Promise<Dashboard> {
     db.postStat.aggregate({ _sum: { views: true }, _max: { syncedAt: true } }),
     db.post.findMany({
       where: { status: "DRAFT" },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       take: DRAFT_LIMIT,
       select: { id: true, title: true, updatedAt: true, readingMinutes: true, template: { select: { name: true } } },
     }),
     Promise.all(
       SYNC_SOURCES.map((source) =>
-        db.syncRun.findFirst({ where: { source }, orderBy: { startedAt: "desc" }, select: RUN_FIELDS }),
+        db.syncRun.findFirst({ where: { source }, orderBy: [{ startedAt: "desc" }, { id: "desc" }], select: RUN_FIELDS }),
       ),
     ),
   ]);

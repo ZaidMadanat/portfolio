@@ -69,7 +69,7 @@ const published = { status: "PUBLISHED", publishedAt: { not: null } } as const;
 async function queryPublished(): Promise<PostSummary[]> {
   const rows = await db.post.findMany({
     where: published,
-    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     select: summarySelect,
   });
   return rows.map(toSummary);

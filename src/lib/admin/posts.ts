@@ -1,6 +1,7 @@
 import type { Category, PostStatus, Prisma } from "@/generated/prisma/client";
 import { renderPostBlocks } from "@/lib/blocks/post-html";
 import { plainText } from "@/lib/blocks/render";
+import { TEMPLATE_ORDER } from "@/lib/admin/templates";
 import { db } from "@/lib/db";
 import { mediaUrl } from "@/lib/media/urls";
 import { readingMinutes } from "@/lib/reading-time";
@@ -104,12 +105,12 @@ export async function getPostForEditor(
 
   const [templates, reviews] = await Promise.all([
     db.template.findMany({
-      orderBy: [{ builtIn: "desc" }, { createdAt: "asc" }],
+      orderBy: TEMPLATE_ORDER,
       select: { id: true, name: true, category: true, blocks: true },
     }),
     db.review.findMany({
       where: { OR: [{ post: null }, { post: { id } }] },
-      orderBy: { date: "desc" },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       select: { id: true, kind: true, title: true, rating: true, year: true, filmLog: { select: { year: true } } },
     }),
   ]);
@@ -171,7 +172,7 @@ export async function listAdminPosts(filter: PostFilter): Promise<{ rows: AdminP
   const [rows, grouped] = await Promise.all([
     db.post.findMany({
       where: status ? { status } : undefined,
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       select: {
         id: true,
         title: true,

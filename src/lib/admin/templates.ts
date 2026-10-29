@@ -1,4 +1,4 @@
-import type { Category } from "@/generated/prisma/client";
+import type { Category, Prisma } from "@/generated/prisma/client";
 import { headingTexts } from "@/lib/blocks/render";
 import { db } from "@/lib/db";
 
@@ -15,10 +15,22 @@ export type AdminTemplate = {
   posts: number;
 };
 
-/** Built-ins in seed order, then saved templates oldest first. */
+/**
+ * Built-ins in spec order (seeded `sortOrder` 1–7), then saved templates
+ * (`sortOrder` 1000) oldest first. Ends on `id` so the order is total even when
+ * rows share a `createdAt`. Every template list and picker uses this.
+ */
+export const TEMPLATE_ORDER = [
+  { builtIn: "desc" },
+  { sortOrder: "asc" },
+  { createdAt: "asc" },
+  { name: "asc" },
+  { id: "asc" },
+] satisfies Prisma.TemplateOrderByWithRelationInput[];
+
 export async function listTemplates(): Promise<AdminTemplate[]> {
   const rows = await db.template.findMany({
-    orderBy: [{ builtIn: "desc" }, { createdAt: "asc" }, { name: "asc" }],
+    orderBy: TEMPLATE_ORDER,
     select: { id: true, name: true, builtIn: true, category: true, blocks: true, _count: { select: { posts: true } } },
   });
   return rows.map(({ blocks, _count, ...t }) => ({ ...t, outline: headingTexts(blocks as unknown[]), posts: _count.posts }));
