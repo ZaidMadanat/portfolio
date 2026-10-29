@@ -1,6 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-
-const PORT = 3100;
+import { SEEDED_URL } from "./e2e/support/servers";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -9,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: SEEDED_URL,
     trace: "on-first-retry",
   },
   projects: [
@@ -24,9 +23,13 @@ export default defineConfig({
       },
     },
   ],
+  // Prepares the e2e databases, builds twice and serves the seeded build on
+  // 3100 and the empty-database build on 3101 (e2e/support/web-server.ts).
+  // Locally a server already on 3100 is reused, so stop stale ones on 3100 and
+  // 3101 first.
   webServer: {
-    command: `npm run build && npm run start -- -p ${PORT}`,
-    url: `http://localhost:${PORT}`,
+    command: "npx tsx e2e/support/web-server.ts",
+    url: SEEDED_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
   },

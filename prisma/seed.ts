@@ -1,8 +1,9 @@
 // `npm run db:seed` (prisma db seed): always upserts the 7 built-in templates.
 // `SEED_FIXTURES=1 npm run db:seed` also adds DEV-ONLY SAMPLE DATA: 12 film logs
-// (Zaid's real April 2026 Letterboxd diary), 8 sample food places, a FILM review
-// and 8 sample posts. Fixture ids start with "dev-fixture-" and fixtures refuse
-// to run against a non-local database. Re-running either mode is idempotent.
+// (Zaid's real April 2026 Letterboxd diary), 8 sample food places, a FILM review,
+// 8 sample posts, top-4 film and album favourites and a sample stats.fm window.
+// Fixture ids start with "dev-fixture-" and fixtures refuse to run against a
+// non-local database. Re-running either mode is idempotent.
 
 import { pathToFileURL } from "node:url";
 import type { Category, Prisma, PrismaClient, Region } from "../src/generated/prisma/client";
@@ -258,6 +259,27 @@ const PLACES: Place[] = [
   },
 ];
 
+/** Top 4 films, by film-log title (each is one of FILM_LOGS). */
+const FAVORITE_FILMS = ["Ben-Hur", "A Clockwork Orange", "Whisper of the Heart", "The Aviator"];
+
+/** Top 4 albums, free-text snapshots (no review behind them). */
+const FAVORITE_ALBUMS: { title: string; artist: string; year: number }[] = [
+  { title: "Marty Supreme (Original Soundtrack)", artist: "Daniel Lopatin", year: 2025 },
+  { title: "Blonde", artist: "Frank Ocean", year: 2016 },
+  { title: "In Rainbows", artist: "Radiohead", year: 2007 },
+  { title: "IGOR", artist: "Tyler, The Creator", year: 2019 },
+];
+
+/** A sample stats.fm 7-day window, rank 1 first. No cover art (coverUrl ""). */
+const ALBUM_LISTENS: { title: string; artist: string; year: number; streams: number }[] = [
+  { title: "Marty Supreme (Original Soundtrack)", artist: "Daniel Lopatin", year: 2025, streams: 64 },
+  { title: "Blonde", artist: "Frank Ocean", year: 2016, streams: 41 },
+  { title: "In Rainbows", artist: "Radiohead", year: 2007, streams: 33 },
+  { title: "Mr. Morale & the Big Steppers", artist: "Kendrick Lamar", year: 2022, streams: 27 },
+  { title: "Promises", artist: "Floating Points, Pharoah Sanders & LSO", year: 2021, streams: 19 },
+  { title: "IGOR", artist: "Tyler, The Creator", year: 2019, streams: 12 },
+];
+
 const SAMPLE_NOTE = p("Sample post for local development.");
 
 type SamplePost = {
@@ -447,6 +469,40 @@ async function seedFixtures(db: PrismaClient) {
     where: { id: BEN_HUR_REVIEW_ID },
     create: { id: BEN_HUR_REVIEW_ID, ...benHur },
     update: benHur,
+  });
+
+  // Favourites: unique on (kind, position), so upsert by that.
+  const favorites = [
+    ...FAVORITE_FILMS.map((title, i) => ({
+      kind: "FILM" as const,
+      position: i + 1,
+      title,
+      year: FILM_LOGS.find((f) => f.title === title)!.year,
+      artist: null,
+      filmLogId: logIds.get(title)!,
+    })),
+    ...FAVORITE_ALBUMS.map((a, i) => ({ kind: "ALBUM" as const, position: i + 1, ...a, filmLogId: null })),
+  ];
+  for (const fav of favorites) {
+    const where = { kind_position: { kind: fav.kind, position: fav.position } };
+    const id = `dev-fixture-fav-${fav.kind.toLowerCase()}-${fav.position}`;
+    await db.favorite.upsert({ where, create: { id, ...fav }, update: fav });
+  }
+
+  // A stats.fm window ending now (a real sync replaces the whole table).
+  const windowEnd = new Date();
+  const windowStart = new Date(windowEnd.getTime() - 7 * 86_400_000);
+  await db.albumListen.deleteMany({ where: { id: { startsWith: "dev-fixture-album-" } } });
+  await db.albumListen.createMany({
+    data: ALBUM_LISTENS.map((a, i) => ({
+      id: `dev-fixture-album-${i + 1}`,
+      statsfmAlbumId: `dev-fixture-${i + 1}`,
+      ...a,
+      coverUrl: "",
+      rank: i + 1,
+      windowStart,
+      windowEnd,
+    })),
   });
 
   // Posts, all published and already "notified" so no new-post email ever fires for them.

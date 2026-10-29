@@ -23,7 +23,9 @@ export function toneAt<T>(tones: readonly T[], index: number): T {
 const FRAME = "@container relative aspect-2/3 w-full overflow-hidden rounded-2xl border-3 border-ink";
 
 // Fills its parent's width; the parent sets the size. The fallback title
-// scales with that width through container units.
+// scales with that width through container units. Those units resolve against
+// an ancestor container, so they sit on the inner span, never on the frame
+// (on the frame they would fall back to the viewport width).
 export function PosterBlock({ title, posterUrl, toneIndex }: PosterBlockProps) {
   if (posterUrl) {
     return (
@@ -43,9 +45,11 @@ export function PosterBlock({ title, posterUrl, toneIndex }: PosterBlockProps) {
     <div
       role="img"
       aria-label={title}
-      className={`${FRAME} flex items-end p-[7cqw] font-display text-[11cqw] leading-[1.05] font-extrabold break-words uppercase ${toneAt(TONES, toneIndex)}`}
+      className={`${FRAME} font-display leading-[1.05] font-extrabold break-words uppercase ${toneAt(TONES, toneIndex)}`}
     >
-      <span className="min-w-0">{title}</span>
+      <span className="absolute inset-0 flex items-end p-[7cqw] text-[11cqw]">
+        <span className="min-w-0">{title}</span>
+      </span>
     </div>
   );
 }

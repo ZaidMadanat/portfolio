@@ -52,3 +52,6 @@ agent-coordination.md
 
 # generated Prisma client (prisma generate, run on postinstall)
 /src/generated/
+
+# e2e empty-database build (e2e/support/web-server.ts)
+/.next-e2e-empty/

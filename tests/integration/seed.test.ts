@@ -53,5 +53,28 @@ describe("seed", () => {
       include: { filmLog: true },
     });
     expect(benHurReview.filmLog?.title).toBe("Ben-Hur");
+
+    // Top 4 films point at their logs; top 4 albums are free-text snapshots.
+    const favs = await db.favorite.findMany({
+      orderBy: [{ kind: "asc" }, { position: "asc" }],
+      include: { filmLog: true },
+    });
+    expect(favs.map((f) => [f.kind, f.position, f.title])).toEqual([
+      ["FILM", 1, "Ben-Hur"],
+      ["FILM", 2, "A Clockwork Orange"],
+      ["FILM", 3, "Whisper of the Heart"],
+      ["FILM", 4, "The Aviator"],
+      ["ALBUM", 1, "Marty Supreme (Original Soundtrack)"],
+      ["ALBUM", 2, "Blonde"],
+      ["ALBUM", 3, "In Rainbows"],
+      ["ALBUM", 4, "IGOR"],
+    ]);
+    expect(favs.filter((f) => f.kind === "FILM").every((f) => f.filmLog?.title === f.title)).toBe(true);
+
+    // One stats.fm 7-day window, ranked from 1.
+    const listens = await db.albumListen.findMany({ orderBy: { rank: "asc" } });
+    expect(listens).toHaveLength(6);
+    expect(listens.map((l) => l.rank)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(listens[0]).toMatchObject({ title: "Marty Supreme (Original Soundtrack)", artist: "Daniel Lopatin" });
   });
 });
