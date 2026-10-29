@@ -78,10 +78,16 @@ test.describe("dashboard", () => {
       }
       await expect(sync.filter({ hasText: "Letterboxd" })).toContainText("3 changed");
 
+      // Locally the Strava guard refuses before any request (never the real API);
+      // the failed run is logged and the row shows it after the refresh.
       await page.getByRole("button", { name: "Run sync now for Strava" }).click();
-      await expect(page.getByRole("status").filter({ hasText: "Strava:" })).toHaveText("Strava: Not wired yet");
+      await expect(page.getByRole("status").filter({ hasText: "Strava:" })).toHaveText(
+        "Strava: Strava sync calls the real API only on Vercel. Set STRAVA_ALLOW_LOCAL=1 to run it from this machine.",
+      );
+      await expect(sync.filter({ hasText: "Strava" })).toContainText("Failed");
+      await expect(sync.filter({ hasText: "Strava" })).toContainText("failed: Strava sync calls the real API only on Vercel");
     } finally {
-      await sql(`DELETE FROM "SyncRun" WHERE id = $1`, [id]);
+      await sql(`DELETE FROM "SyncRun" WHERE id = $1 OR (source = 'STRAVA' AND ok = false)`, [id]);
     }
   });
 

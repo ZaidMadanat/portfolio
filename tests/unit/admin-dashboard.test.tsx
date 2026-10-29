@@ -51,13 +51,13 @@ describe("SyncStatus", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
-  it("runs the server action for that source and shows its message", async () => {
-    actions.runSyncNow.mockResolvedValue({ ok: false, message: "Not wired yet" });
+  it("runs the server action for that source, shows its message and refreshes (a failed run is logged too)", async () => {
+    actions.runSyncNow.mockResolvedValue({ ok: false, message: "stats.fm responded 500" });
     render(<SyncStatus rows={[...rows]} />);
     fireEvent.click(screen.getByRole("button", { name: "Run sync now for stats.fm" }));
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("stats.fm: Not wired yet"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("stats.fm: stats.fm responded 500"));
     expect(actions.runSyncNow).toHaveBeenCalledWith("STATSFM");
-    expect(router.refresh).not.toHaveBeenCalled();
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 
   it("refreshes the page after a successful run", async () => {
@@ -72,6 +72,7 @@ describe("SyncStatus", () => {
     render(<SyncStatus rows={[...rows]} />);
     fireEvent.click(screen.getByRole("button", { name: "Run sync now for Letterboxd" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Letterboxd: Couldn't start the sync. Try again."));
+    expect(router.refresh).not.toHaveBeenCalled();
   });
 });
 

@@ -31,7 +31,8 @@ export function SyncStatus({ rows }: { rows: SyncRow[] }) {
     try {
       const result = await runSyncNow(row.source);
       setMessage(`${row.name}: ${result.message}`);
-      if (result.ok) startTransition(() => router.refresh());
+      // Failed runs are logged too, so the row's status changes either way.
+      startTransition(() => router.refresh());
     } catch {
       setMessage(`${row.name}: Couldn't start the sync. Try again.`);
     } finally {

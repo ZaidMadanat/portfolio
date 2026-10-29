@@ -35,8 +35,8 @@ const when = new Intl.DateTimeFormat("en-US", {
 function runDetail(run: SyncRunSummary | null): string {
   if (!run) return "Never run";
   const at = when.format(run.startedAt);
-  if (!run.ok) return `${at} · failed${run.message ? `: ${run.message}` : ""}`;
   if (!run.finishedAt) return `${at} · still running`;
+  if (!run.ok) return `${at} · failed${run.message ? `: ${run.message}` : ""}`;
   return `${at} · ${run.itemsChanged} changed`;
 }
 

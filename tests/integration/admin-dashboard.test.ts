@@ -133,18 +133,17 @@ describe("getDashboard", () => {
   });
 });
 
+// runSyncNow runs real syncs now (Task 32); its tests live in cron.test.ts,
+// with every outside call stubbed. Here: only the guards, which run first.
 describe("runSyncNow", () => {
-  it("isn't wired to the sync code yet (Task 32)", async () => {
-    await expect(runSyncNow("LETTERBOXD")).resolves.toEqual({ ok: false, message: "Not wired yet" });
-    expect(await db.syncRun.count()).toBe(0);
-  });
-
   it("rejects unknown sources", async () => {
     await expect(runSyncNow("HOUSEKEEPING" as never)).rejects.toThrow();
+    expect(await db.syncRun.count()).toBe(0);
   });
 
   it("needs an admin session", async () => {
     admin.signedIn = false;
     await expect(runSyncNow("STRAVA")).rejects.toThrow();
+    expect(await db.syncRun.count()).toBe(0);
   });
 });
