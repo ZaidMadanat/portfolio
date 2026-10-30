@@ -4,17 +4,17 @@ import { SocialGlyph } from "@/components/site/SocialGlyph";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
 import { CalEmbed } from "@/features/contact/CalEmbed";
-import { calLinkFromEnv } from "@/features/contact/cal-link";
+import { calEventsFromEnv } from "@/features/contact/cal-link";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Email Zaid Madanat, find him elsewhere, or book a 30-minute chat.",
+  description: "Email Zaid Madanat, find him elsewhere, or book a chat.",
 };
 
 const EMAIL = "zaidsmadanat@gmail.com";
 const PROFILES = SOCIAL_LINKS.filter((link) => link.icon !== "email");
 // Inlined at build time, so the page stays static either way.
-const CAL_LINK = calLinkFromEnv(process.env.NEXT_PUBLIC_CALCOM_LINK);
+const CAL_EVENTS = calEventsFromEnv(process.env.NEXT_PUBLIC_CALCOM_LINK);
 
 export default function ContactPage() {
   return (
@@ -26,7 +26,7 @@ export default function ContactPage() {
           </h1>
           <p className="max-w-prose text-lg leading-relaxed text-muted sm:text-xl">
             I&apos;m always open to discussing projects, opportunities, or just chatting about
-            AI, statistics, and philosophy. Email is fastest, or grab 30 minutes on my calendar.
+            AI, statistics, and philosophy. Email is fastest, or book a time on my calendar.
           </p>
           <ButtonLink
             href={`mailto:${EMAIL}`}
@@ -57,10 +57,10 @@ export default function ContactPage() {
 
       <Card as="section" aria-labelledby="book-heading" className="flex flex-col gap-5 p-5 sm:p-7">
         <h2 id="book-heading" className="font-display text-2xl font-extrabold sm:text-3xl">
-          Book a 30-minute chat
+          Book a chat
         </h2>
-        {CAL_LINK ? (
-          <CalEmbed calLink={CAL_LINK} />
+        {CAL_EVENTS.length > 0 ? (
+          <CalEmbed events={CAL_EVENTS} />
         ) : (
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-lg text-muted">Calendar coming soon. Email me to find a time.</p>

@@ -6,7 +6,7 @@ import { SOCIAL_LINKS } from "../src/components/site/social-links";
 const CAL_LINK = process.env.NEXT_PUBLIC_CALCOM_LINK?.trim();
 
 function bookingCard(page: Page) {
-  return page.getByRole("region", { name: "Book a 30-minute chat" });
+  return page.getByRole("region", { name: "Book a chat" });
 }
 
 const noIframe = (page: Page) =>
@@ -36,7 +36,7 @@ test("shows the heading, intro, email button and 4 social rows", async ({ page }
   }
 
   await expect(
-    bookingCard(page).getByRole("heading", { name: "Book a 30-minute chat" }),
+    bookingCard(page).getByRole("heading", { name: "Book a chat" }),
   ).toBeVisible();
 });
 
