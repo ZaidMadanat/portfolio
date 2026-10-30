@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ZM">
+  <title>ZM</title>
+  <g transform="rotate(-6 32 32)">
+    <rect x="9" y="9" width="50" height="50" rx="13" fill="#1c1a17"/>
+    <rect x="5.5" y="5.5" width="50" height="50" rx="13" fill="#ff6b2c" stroke="#1c1a17" stroke-width="3.5"/>
+    <g fill="#1c1a17" transform="translate(-1.5 -0.5)">
+      <path d="M13 20h16v4.8l-9.6 12.4H29V42H13v-4.8l9.6-12.4H13z"/>
+      <path d="M31 42V20h5.6l4.4 9.8 4.4-9.8H51v22h-5V30l-3.4 7.4h-3.2L36 30v12z"/>
+    </g>
+  </g>
+</svg>

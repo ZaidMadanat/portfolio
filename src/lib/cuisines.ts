@@ -1,0 +1,22 @@
+/** The base cuisine list, in spec §6.5 order. Custom cuisines used in reviews are added at query time. */
+export const BASE_CUISINES: readonly string[] = [
+  "American",
+  "Bakery",
+  "Burgers",
+  "Burmese",
+  "Californian",
+  "Chinese",
+  "Coffee & Dessert",
+  "Ethiopian",
+  "Indian",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Mediterranean",
+  "Mexican",
+  "Middle Eastern",
+  "Pizza",
+  "Seafood",
+  "Thai",
+  "Vietnamese",
+];

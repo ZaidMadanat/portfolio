@@ -1,0 +1,42 @@
+/* MapLibre's controls in Citrus Pop tokens, so they follow the theme. Scoped
+   to the food map; loaded with it (FoodMap), so no other page gets it. */
+[data-testid="food-map"] .maplibregl-ctrl-group {
+  border: 2px solid var(--color-ink);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  overflow: hidden;
+}
+
+[data-testid="food-map"] .maplibregl-ctrl-group button + button {
+  border-top: 2px solid var(--color-line);
+}
+
+.dark [data-testid="food-map"] .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+/* The required credit (spec §6 exception): small and muted. */
+[data-testid="food-map"] .maplibregl-ctrl-attrib {
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+[data-testid="food-map"] .maplibregl-ctrl-attrib a {
+  color: var(--color-muted);
+}
+
+[data-testid="food-map"] .maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 12px;
+}
+
+.dark [data-testid="food-map"] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+  background-color: transparent;
+}
+
+[data-testid="food-map"] .maplibregl-cooperative-gesture-screen {
+  font-family: var(--font-body);
+  font-weight: 600;
+}

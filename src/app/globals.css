@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* `dark:` follows the class next-themes puts on <html>, not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Citrus Pop tokens, light values (spec §5). Plain @theme so the .dark block
+   below can override the variables the utilities read. */
+@theme {
+  --color-bg: #fff8e7;
+  --color-surface: #ffffff;
+  --color-ink: #1c1a17;
+  --color-muted: #5e574d;
+  --color-line: #eadfc8;
+  --color-accent: #ff6b2c;
+  --color-accent-ink: #b83e0c;
+  --color-on-accent: #1c1a17;
+  --color-second: #2e4bff;
+  --color-on-second: #ffffff;
+  --color-soft: #ffe6cc;
+  --color-soft2: #e3e8ff;
+
+  --shadow-hard: 4px 4px 0 var(--color-ink);
+  --shadow-hard-lg: 6px 6px 0 var(--color-ink);
+}
+
+/* next/font variables are named apart from the theme keys to avoid a
+   self-referencing --font-display. */
+@theme inline {
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  .dark {
+    --color-bg: #1a1712;
+    --color-surface: #26211a;
+    --color-ink: #fff3de;
+    --color-muted: #c9bba4;
+    --color-line: #3d3429;
+    --color-accent: #ff7a3d;
+    --color-accent-ink: #ff9a66;
+    --color-on-accent: #1a1712;
+    --color-second: #8c9dff;
+    --color-on-second: #1a1712;
+    --color-soft: #3d2b1c;
+    --color-soft2: #262b48;
+    color-scheme: dark;
+  }
+
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-bg text-ink font-body;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-second);
+    outline-offset: 2px;
+  }
+}
